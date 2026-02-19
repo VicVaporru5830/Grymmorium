@@ -10,15 +10,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔹 Verificar API Key
+// 🔹 Inicializar OpenAI
 if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ Falta OPENAI_API_KEY en el archivo .env");
-  process.exit(1);
+  console.warn("⚠️ OPENAI_API_KEY no definida. La IA no funcionará.");
 }
 
-// 🔹 Inicializar OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY || ""
 });
 
 // 🔹 Servir archivos estáticos (index.html, style.css, script.js)
@@ -38,6 +36,10 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ error: "La pregunta es obligatoria" });
     }
 
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "API Key de OpenAI no definida" });
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -52,12 +54,12 @@ app.post("/chat", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error en /chat:", error.message);
+    console.error("Error en /chat:", error);
     res.status(500).json({ error: "Error al procesar la solicitud" });
   }
 });
 
-// 🔹 Iniciar servidor
+// 🔹 Iniciar servidor con puerto dinámico para Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
