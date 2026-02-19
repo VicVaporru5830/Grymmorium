@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mi Proyecto Web</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Proyecto con APIs</h1>
+
+  <!-- BOTONES -->
+  <button onclick="irYoutube()">YouTube</button>
+  <button onclick="irFacebook()">Facebook</button>
+
+  <!-- VERIFICACIÓN 2 PASOS SIMPLE -->
+  <h2>Verificación en 2 pasos</h2>
+  <input type="text" id="codigo" placeholder="Ingresa código">
+  <button onclick="verificarCodigo()">Verificar</button>
+
+  <!-- MAPA -->
+  <h2>Mapa</h2>
+  <div id="map" style="height:400px;"></div>
+
+  <!-- IA -->
+  <h2>Chat IA</h2>
+  <input type="text" id="pregunta" placeholder="Pregunta sobre el tema">
+  <button onclick="preguntarIA()">Preguntar</button>
+  <p id="respuesta"></p>
+
+  <script src="script.js"></script>
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFOwFuxoNRk3NDmSTeui88vUY1nCnLTFI">
+  </script>
+</body>
+</html>
