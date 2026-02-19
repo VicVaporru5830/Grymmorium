@@ -1,0 +1,22 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Node / tooling frontend (si usas)
+node_modules/
+dist/
+build/
+
+# Composer (si llegas a usarlo en backend)
+vendor/
+
+# Entornos locales
+.env
+*.local
+
+# VS Code
+.vscode/
+
+# Logs / caché
+*.log
+cache/
