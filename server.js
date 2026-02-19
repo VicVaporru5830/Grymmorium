@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// 🔹 Ruta de chat IA
+// 🔹 Ruta de chat IA sobre dinosaurios
 app.post("/chat", async (req, res) => {
   try {
     const { pregunta } = req.body;
@@ -43,7 +43,10 @@ app.post("/chat", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "Eres un experto en historia. Solo respondes temas históricos." },
+        {
+          role: "system",
+          content: "Eres un experto en dinosaurios. Solo respondes preguntas sobre dinosaurios, sus especies, hábitats, alimentación y curiosidades."
+        },
         { role: "user", content: pregunta }
       ],
       max_tokens: 300

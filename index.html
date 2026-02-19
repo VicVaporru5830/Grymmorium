@@ -1,35 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Mi Proyecto Web</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proyecto Web Completo</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Overlay para oscurecer fondo -->
+  <div class="overlay"></div>
 
-  <h1>Proyecto con APIs</h1>
+  <!-- Contenedor principal -->
+  <div class="container">
+    <h1>Proyecto con APIs y Chat de Dinosaurios</h1>
 
-  <!-- BOTONES -->
-  <button onclick="irYoutube()">YouTube</button>
-  <button onclick="irFacebook()">Facebook</button>
+    <!-- BOTONES YOUTUBE Y FACEBOOK -->
+    <h2>Redes Sociales</h2>
+    <div class="social-buttons">
+      <button onclick="cargarVideosYouTube()">Ver videos YouTube</button>
+      <button onclick="cargarPostsFacebook()">Ver posts Facebook</button>
+    </div>
 
-  <!-- VERIFICACIÓN 2 PASOS SIMPLE -->
-  <h2>Verificación en 2 pasos</h2>
-  <input type="text" id="codigo" placeholder="Ingresa código">
-  <button onclick="verificarCodigo()">Verificar</button>
+    <!-- Contenedor dinámico YouTube -->
+    <div id="youtube-videos"></div>
 
-  <!-- MAPA -->
-  <h2>Mapa</h2>
-  <div id="map" style="height:400px;"></div>
+    <!-- Contenedor dinámico Facebook -->
+    <div id="facebook-posts"></div>
 
-  <!-- IA -->
-  <h2>Chat IA</h2>
-  <input type="text" id="pregunta" placeholder="Pregunta sobre el tema">
-  <button onclick="preguntarIA()">Preguntar</button>
-  <p id="respuesta"></p>
+    <!-- VERIFICACIÓN 2 PASOS SIMPLE -->
+    <h2>Verificación en 2 pasos</h2>
+    <input type="text" id="codigo" placeholder="Ingresa código">
+    <button onclick="verificarCodigo()">Verificar</button>
+    <p id="verificacion-msg"></p>
 
+    <!-- MAPA -->
+    <h2>Mapa</h2>
+    <div id="map"></div>
+
+    <!-- IA -->
+    <h2>Chat IA sobre Dinosaurios</h2>
+    <input type="text" id="pregunta" placeholder="Pregunta sobre dinosaurios">
+    <button onclick="preguntarIA()">Preguntar</button>
+    <p id="respuesta"></p>
+  </div>
+
+  <!-- Scripts -->
   <script src="script.js"></script>
+  
+  <!-- Google Maps -->
   <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFOwFuxoNRk3NDmSTeui88vUY1nCnLTFI">
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
   </script>
 </body>
 </html>
