@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 ////////////////////////////////////////////////////
-// LOG DE VARIABLES (MUY IMPORTANTE EN RENDER)
+// LOG DE VARIABLES
 ////////////////////////////////////////////////////
 console.log("===== VARIABLES DE ENTORNO =====");
 console.log("HF:", process.env.HF_API_KEY ? "✅ Cargada" : "❌ No cargada");
@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 ////////////////////////////////////////////////////
-// CHAT IA (HUGGING FACE - NUEVO ROUTER)
+// CHAT IA (HUGGING FACE ROUTER ACTUAL)
 ////////////////////////////////////////////////////
 app.post("/chat", async (req, res) => {
   try {
@@ -52,7 +52,16 @@ app.post("/chat", async (req, res) => {
     const response = await axios.post(
       "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
       {
-        inputs: `<s>[INST] Eres un experto en dinosaurios. Responde claro y profesional. ${pregunta} [/INST]`
+        inputs: `<|system|>
+Eres un experto en dinosaurios. Responde claro y profesional.
+<|user|>
+${pregunta}
+<|assistant|>`,
+        parameters: {
+          max_new_tokens: 300,
+          temperature: 0.7,
+          return_full_text: false
+        }
       },
       {
         headers: {
@@ -62,10 +71,12 @@ app.post("/chat", async (req, res) => {
       }
     );
 
-    const texto = response.data?.[0]?.generated_text || "Sin respuesta del modelo";
+    const texto =
+      response.data?.[0]?.generated_text ||
+      "Sin respuesta del modelo";
 
     res.json({
-      respuesta: texto
+      respuesta: texto.trim()
     });
 
   } catch (error) {
