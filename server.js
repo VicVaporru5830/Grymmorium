@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const OpenAI = require("openai");
 const axios = require("axios");
 
 const app = express();
@@ -18,22 +17,11 @@ app.use(express.static(path.join(__dirname)));
 // LOG DE VARIABLES (MUY IMPORTANTE EN RENDER)
 ////////////////////////////////////////////////////
 console.log("===== VARIABLES DE ENTORNO =====");
-console.log("OPENAI:", process.env.OPENAI_API_KEY ? "✅ Cargada" : "❌ No cargada");
+console.log("HF:", process.env.HF_API_KEY ? "✅ Cargada" : "❌ No cargada");
 console.log("YOUTUBE:", process.env.YOUTUBE_API_KEY ? "✅ Cargada" : "❌ No cargada");
 console.log("FB_PAGE_ID:", process.env.FB_PAGE_ID ? "✅ Cargada" : "❌ No cargada");
 console.log("FB_ACCESS_TOKEN:", process.env.FB_ACCESS_TOKEN ? "✅ Cargada" : "❌ No cargada");
 console.log("=================================");
-
-////////////////////////////////////////////////////
-// INICIALIZAR OPENAI SOLO SI EXISTE
-////////////////////////////////////////////////////
-let openai = null;
-
-if (process.env.OPENAI_API_KEY) {
-  openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-  });
-}
 
 ////////////////////////////////////////////////////
 // RUTA PRINCIPAL
@@ -43,13 +31,13 @@ app.get("/", (req, res) => {
 });
 
 ////////////////////////////////////////////////////
-// CHAT IA
+// CHAT IA (HUGGING FACE)
 ////////////////////////////////////////////////////
 app.post("/chat", async (req, res) => {
   try {
-    if (!openai) {
+    if (!process.env.HF_API_KEY) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY no configurada en el servidor"
+        error: "HF_API_KEY no configurada en el servidor"
       });
     }
 
@@ -61,27 +49,30 @@ app.post("/chat", async (req, res) => {
       });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "Eres un experto en dinosaurios."
-        },
-        { role: "user", content: pregunta }
-      ],
-      max_tokens: 300
-    });
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      {
+        inputs: `<s>[INST] Eres un experto en dinosaurios. ${pregunta} [/INST]`
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const texto = response.data[0]?.generated_text || "Sin respuesta";
 
     res.json({
-      respuesta: completion.choices[0].message.content
+      respuesta: texto
     });
 
   } catch (error) {
-    console.error("🔥 ERROR OPENAI:", error.response?.data || error.message);
+    console.error("🔥 ERROR HUGGING FACE:", error.response?.data || error.message);
 
     res.status(500).json({
-      error: error.response?.data?.error?.message || error.message
+      error: error.response?.data?.error || error.message
     });
   }
 });
