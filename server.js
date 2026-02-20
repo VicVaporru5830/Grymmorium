@@ -50,7 +50,7 @@ app.post("/chat", async (req, res) => {
     }
 
     const response = await axios.post(
-      "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2",
+      "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
       {
         inputs: `<s>[INST] Eres un experto en dinosaurios. Responde claro y profesional. ${pregunta} [/INST]`
       },
