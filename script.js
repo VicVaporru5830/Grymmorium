@@ -3,11 +3,11 @@
 //////////////////////
 const codigoCorrecto = "123456";
 
-function verificarCodigo() {
+function verificarCodigo(){
   const codigo = document.getElementById("codigo").value;
   const msg = document.getElementById("verificacion-msg");
 
-  if (codigo === codigoCorrecto) {
+  if(codigo === codigoCorrecto){
     msg.innerText = "Verificación correcta ✅";
     msg.style.color = "green";
   } else {
@@ -43,25 +43,24 @@ window.initMap = initMap;
 //////////////////////
 // IA DINOSAURIOS
 //////////////////////
-async function preguntarIA() {
+async function preguntarIA(){
   const pregunta = document.getElementById("pregunta").value;
   const respuestaBox = document.getElementById("respuesta");
 
-  if (!pregunta) return;
+  if(!pregunta) return;
   respuestaBox.innerText = "Cargando...";
 
   try {
     const res = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pregunta }),
+      body: JSON.stringify({ pregunta })
     });
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
     respuestaBox.innerText = data.respuesta;
-  } catch (error) {
+
+  } catch(error){
     respuestaBox.innerText = "Error IA: " + error.message;
   }
 }
@@ -69,7 +68,7 @@ async function preguntarIA() {
 //////////////////////
 // YOUTUBE
 //////////////////////
-async function cargarVideosYouTube() {
+async function cargarVideosYouTube(){
   const contenedor = document.getElementById("youtube-videos");
   const errorBox = document.getElementById("youtube-error");
 
@@ -79,22 +78,22 @@ async function cargarVideosYouTube() {
   try {
     const res = await fetch("/youtube");
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
     errorBox.innerText = "";
 
-    if (!data.items || data.items.length === 0) {
+    if(!data.items || data.items.length === 0){
       errorBox.innerText = "No se encontraron videos.";
       return;
     }
 
-    data.items.forEach((item) => {
-      if (item.id.kind === "youtube#video") {
+    data.items.forEach(item => {
+      if(item.id.kind === "youtube#video"){
         contenedor.innerHTML += `
           <div class="video">
             <iframe width="300" height="170"
               src="https://www.youtube.com/embed/${item.id.videoId}"
               frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen>
             </iframe>
             <p>${item.snippet.title}</p>
@@ -102,7 +101,8 @@ async function cargarVideosYouTube() {
         `;
       }
     });
-  } catch (err) {
+
+  } catch(err){
     errorBox.innerText = "Error YouTube: " + err.message;
   }
 }
@@ -110,26 +110,25 @@ async function cargarVideosYouTube() {
 //////////////////////
 // FACEBOOK
 //////////////////////
-async function cargarPostsFacebook() {
+async function cargarPostsFacebook(){
   const contenedor = document.getElementById("facebook-posts");
   const errorBox = document.getElementById("facebook-error");
 
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando publicaciones...";
 
-  try {
+  try{
     const res = await fetch("/facebook");
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
     errorBox.innerText = "";
 
-    if (!data.data || data.data.length === 0) {
+    if(!data.data || data.data.length === 0){
       errorBox.innerText = "No se encontraron publicaciones.";
       return;
     }
 
-    data.data.forEach((post) => {
+    data.data.forEach(post => {
       contenedor.innerHTML += `
         <div class="fb-post">
           <p>${post.message || "[Sin mensaje]"}</p>
@@ -139,7 +138,8 @@ async function cargarPostsFacebook() {
         </div>
       `;
     });
-  } catch (err) {
+
+  } catch(err){
     errorBox.innerText = "Error Facebook: " + err.message;
   }
 }
@@ -147,6 +147,14 @@ async function cargarPostsFacebook() {
 //////////////////////
 // STREAMING (Cloudflare R2)
 //////////////////////
+function getFileNameFromKey(key) {
+  try {
+    return (key || '').split('/').pop() || key || 'archivo';
+  } catch {
+    return key || 'archivo';
+  }
+}
+
 async function loadVideos() {
   const grid = document.getElementById("videos-grid");
   if (!grid) return;
@@ -159,19 +167,66 @@ async function loadVideos() {
     grid.innerHTML = "";
 
     (data.videos || []).forEach((v) => {
+      const fileName = getFileNameFromKey(v.key);
       const card = document.createElement("div");
       card.className = "video-card";
-      card.style.maxWidth = "320px";
+      card.style.maxWidth = "360px";
+      card.title = v.key; // tooltip con key completa
+
       card.innerHTML = `
-        <video controls preload="metadata" style="width:100%;border-radius:10px">
-          ${v.url}
-        </video>
-        <div style="font-size:12px;color:#555;margin-top:6px">
-          <div><b>Key:</b> ${v.key}</div>
+        <div class="video-wrap">
+          <video
+            class="hover-video"
+            muted
+            playsinline
+            preload="metadata"
+            src="${v.url}">
+          </video>
+
+          <div class="play-badge" aria-hidden="true">
+            <svg viewBox="0 0 100 100" fill="currentColor">
+              <circle cx="50" cy="50" r="44" opacity=".25"></circle>
+              <polygon points="40,30 75,50 40,70"></polygon>
+            </svg>
+          </div>
+
+          <div class="video-overlay">
+            <span class="video-filename">${fileName}</span>
+          </div>
+        </div>
+
+        <div class="video-meta">
           <div><b>Tamaño:</b> ${(v.size / 1024 / 1024).toFixed(1)} MB</div>
           <div><b>Modificado:</b> ${new Date(v.lastModified).toLocaleString()}</div>
         </div>
       `;
+
+      // Reproducción al hover “tipo YouTube”
+      const vid = card.querySelector(".hover-video");
+      if (vid) {
+        // Hover desktop
+        card.addEventListener("mouseenter", () => {
+          vid.currentTime = 0;
+          const p = vid.play();
+          // algunos navegadores pueden bloquear; lo ignoramos
+          if (p && typeof p.catch === "function") p.catch(() => {});
+        });
+        card.addEventListener("mouseleave", () => {
+          vid.pause();
+          vid.currentTime = 0;
+        });
+
+        // Soporte táctil (tap para reproducir/pausar)
+        card.addEventListener("click", () => {
+          if (vid.paused) {
+            const p = vid.play();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+          } else {
+            vid.pause();
+          }
+        });
+      }
+
       grid.appendChild(card);
     });
 
@@ -217,5 +272,5 @@ async function handleUpload(e) {
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
   document.getElementById("refreshBtn")?.addEventListener("click", loadVideos);
-  loadVideos(); // carga inicial de videos si existen
+  loadVideos(); // carga inicial
 });
