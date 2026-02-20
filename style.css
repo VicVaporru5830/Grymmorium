@@ -1,247 +1,197 @@
-/* === FONDO GENERAL === */
+/* ======================= */
+/*       BASE GLOBAL       */
+/* ======================= */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Cinzel', serif;
-  background: radial-gradient(circle at center, #1a0f2e 0%, #0b0615 100%);
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #0f1b2a, #1a2b45);
+  color: #e0e0e0;
   min-height: 100vh;
-  position: relative;
-  color: #f5e6ff;
 }
 
-/* Capa oscura con niebla */
-.overlay {
+/* Capa de efecto suave */
+.backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(10,10,20,0.6);
+  backdrop-filter: blur(6px);
   z-index: 0;
 }
 
-/* === CONTENEDOR === */
-.container {
+/* ======================= */
+/*        CONTENEDOR       */
+/* ======================= */
+.main-container {
   position: relative;
   z-index: 1;
-  background: rgba(40, 20, 60, 0.92);
-  max-width: 760px;
-  width: 92%;
-  margin: 40px auto;
-  padding: 35px;
-  border-radius: 18px;
-  border: 2px solid #b084f5;
-  box-shadow: 0 0 25px rgba(176, 132, 245, 0.45);
+  max-width: 800px;
+  width: 90%;
+  margin: 50px auto;
+  padding: 30px;
+  border-radius: 20px;
+  background: rgba(30, 40, 60, 0.95);
+  border: 1px solid #4e91ff;
+  box-shadow: 0 10px 30px rgba(78,145,255,0.35);
 }
 
-/* TÍTULOS */
+/* ======================= */
+/*        TIPOGRAFÍA       */
+/* ======================= */
 h1, h2 {
-  text-align: center;
-  color: #d8b4ff;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-top: 8px;
-  text-shadow: 0 0 12px #b084f5;
+  text-align: left;
+  font-weight: 800;
+  font-size: 2em;
+  color: #88c0ff;
+  margin-bottom: 15px;
+  text-shadow: 0 0 6px #4e91ff;
 }
 
-/* BOTONES */
+/* ======================= */
+/*         BOTONES         */
+/* ======================= */
 button {
-  padding: 12px 14px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6a0dad, #9b4dff);
+  border-radius: 8px;
+  background: #4e91ff;
   color: #fff;
-  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-  margin: 5px 6px 5px 0;
-  transition: 0.25s ease;
-  box-shadow: 0 0 12px rgba(176,132,245,0.6);
+  transition: all 0.3s ease;
+  box-shadow: 0 0 12px rgba(78,145,255,0.5);
 }
 button:hover {
-  background: linear-gradient(135deg, #9b4dff, #6a0dad);
-  transform: scale(1.05);
-  box-shadow: 0 0 18px rgba(176,132,245,0.9);
+  background: #88c0ff;
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(78,145,255,0.8);
 }
 
-/* INPUTS */
+/* ======================= */
+/*          INPUTS         */
+/* ======================= */
 input[type="text"],
 input[type="file"] {
   width: 100%;
   padding: 12px;
-  border-radius: 10px;
-  border: 2px solid #b084f5;
-  margin: 7px 0 10px;
-  font-size: 16px;
-  background: #2a153d;
-  color: #f5e6ff;
-  box-shadow: inset 0 0 8px rgba(176,132,245,0.4);
+  border-radius: 12px;
+  border: 1px solid #4e91ff;
+  background: #192a3d;
+  color: #e0e0e0;
+  font-size: 15px;
+  margin: 8px 0;
+  box-shadow: inset 0 0 6px rgba(78,145,255,0.3);
 }
 
-/* CAJAS */
-#respuesta, #verificacion-msg, #upload-status {
-  margin-top: 10px;
-  padding: 12px;
+/* ======================= */
+/*          CAJAS          */
+/* ======================= */
+.alert-box, #status-msg {
+  margin-top: 12px;
+  padding: 14px;
   border-radius: 10px;
-  background: rgba(176,132,245,0.15);
-  border-left: 5px solid #9b4dff;
-  min-height: 40px;
-  color: #f5e6ff;
+  background: rgba(78,145,255,0.1);
+  border-left: 4px solid #88c0ff;
+  min-height: 45px;
+  color: #e0e0e0;
 }
 
-/* MAPA */
+/* ======================= */
+/*          MAPA           */
+/* ======================= */
 #map {
-  margin-top: 15px;
+  margin-top: 20px;
   width: 100%;
-  height: 300px;
-  border-radius: 15px;
-  border: 3px solid #9b4dff;
-  box-shadow: 0 0 15px rgba(176,132,245,0.6);
+  height: 320px;
+  border-radius: 14px;
+  border: 2px solid #88c0ff;
+  box-shadow: 0 0 18px rgba(78,145,255,0.4);
 }
 
-/* REDES */
-#youtube-videos, #facebook-posts {
+/* ======================= */
+/*       REDES GRID        */
+/* ======================= */
+.social-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  justify-content: center;
+  gap: 18px;
+  justify-content: flex-start;
   margin-bottom: 20px;
 }
-.video, .fb-post {
-  background: rgba(40,20,60,0.85);
-  padding: 10px;
-  border-radius: 12px;
-  border-left: 5px solid #9b4dff;
-  box-shadow: 0 0 12px rgba(176,132,245,0.4);
-  max-width: 300px;
-  color: #f5e6ff;
-}
-
-/* ======================== */
-/*    PLAYER PRINCIPAL     */
-/* ======================== */
-.player {
-  background: #0b0615;
+.social-card {
+  flex: 1 1 280px;
+  background: rgba(25,40,60,0.85);
+  padding: 14px;
   border-radius: 14px;
-  border: 2px solid #9b4dff;
-  overflow: hidden;
-  box-shadow: 0 0 25px rgba(176,132,245,0.5);
-  margin-bottom: 18px;
+  border-left: 4px solid #88c0ff;
+  box-shadow: 0 0 15px rgba(78,145,255,0.2);
+  color: #e0e0e0;
 }
 
-.player-wrap {
+/* ======================= */
+/*        PLAYER           */
+/* ======================= */
+.video-player {
   position: relative;
-  background: #000;
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  overflow: hidden;
-}
-
-#main-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-}
-
-/* Overlay título principal */
-.player-overlay {
-  position: absolute;
-  left: 0; top: 0; right: 0;
-  padding: 10px 12px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
-  color: #d8b4ff;
-  pointer-events: none;
-  text-shadow: 0 0 8px #b084f5;
-}
-#main-filename {
-  font-weight: 700;
-}
-
-/* ======================== */
-/*    MINIATURAS GRID      */
-/* ======================== */
-#videos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.video-card {
-  background: rgba(40,20,60,0.85);
+  background: #101820;
   border-radius: 12px;
-  border-left: 5px solid #9b4dff;
-  box-shadow: 0 0 15px rgba(176,132,245,0.4);
   overflow: hidden;
-  transition: transform .15s ease, box-shadow .15s ease;
-  cursor: pointer;
-  color: #f5e6ff;
+  border: 1px solid #88c0ff;
+  box-shadow: 0 0 20px rgba(78,145,255,0.5);
+  margin-bottom: 20px;
 }
-.video-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(176,132,245,0.7);
-}
-
-.video-wrap {
-  position: relative;
-  background: #000;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-}
-
-.hover-video {
+.video-frame {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
   object-fit: cover;
 }
-
-/* Overlay nombre miniatura */
-.video-overlay {
+.video-title-overlay {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0));
-  color: #d8b4ff;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity .18s ease, transform .18s ease;
-  pointer-events: none;
-  text-shadow: 0 0 8px #b084f5;
-}
-.video-card:hover .video-overlay {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.video-filename {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  bottom: 0;
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: #88c0ff;
   font-weight: 600;
 }
 
-/* Botón play tenue */
-.play-badge {
-  position: absolute;
-  inset: 0;
+/* ======================= */
+/*       MINIATURAS        */
+/* ======================= */
+.video-grid {
   display: grid;
-  place-items: center;
-  color: #fff;
-  pointer-events: none;
-  opacity: .0;
-  transition: opacity .18s ease;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
 }
-.play-badge svg {
-  width: 54px;
-  height: 54px;
-  filter: drop-shadow(0 0 12px rgba(176,132,245,.6));
+.video-card-mini {
+  position: relative;
+  background: #182a40;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.video-card:hover .play-badge {
-  opacity: .25;
+.video-card-mini:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 20px rgba(78,145,255,0.5);
 }
-
-.video-meta {
-  padding: 10px 12px 12px;
-  font-size: 12px;
-  color: #d8b4ff;
+.video-card-mini img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+.video-card-overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.6);
+  color: #88c0ff;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.video-card-mini:hover .video-card-overlay {
+  opacity: 1;
 }
