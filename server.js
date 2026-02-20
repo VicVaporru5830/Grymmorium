@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 ////////////////////////////////////////////////////
-// CHAT IA (HUGGING FACE ROUTER ACTUAL)
+// CHAT IA (HUGGING FACE ROUTER FUNCIONAL)
 ////////////////////////////////////////////////////
 app.post("/chat", async (req, res) => {
   try {
@@ -50,15 +50,15 @@ app.post("/chat", async (req, res) => {
     }
 
     const response = await axios.post(
-      "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
+      "https://router.huggingface.co/hf-inference/models/google/gemma-2b-it",
       {
-        inputs: `<|system|>
-Eres un experto en dinosaurios. Responde claro y profesional.
-<|user|>
-${pregunta}
-<|assistant|>`,
+        inputs: `Eres un experto en dinosaurios. Responde claro y profesional.
+
+Pregunta: ${pregunta}
+
+Respuesta:`,
         parameters: {
-          max_new_tokens: 300,
+          max_new_tokens: 250,
           temperature: 0.7,
           return_full_text: false
         }
@@ -67,12 +67,14 @@ ${pregunta}
         headers: {
           Authorization: `Bearer ${process.env.HF_API_KEY}`,
           "Content-Type": "application/json"
-        }
+        },
+        timeout: 60000
       }
     );
 
     const texto =
       response.data?.[0]?.generated_text ||
+      response.data?.generated_text ||
       "Sin respuesta del modelo";
 
     res.json({
