@@ -5,36 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Proyecto Web Completo</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    #map {
+      width: 100%;
+      height: 400px;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+  </style>
 </head>
+
 <body>
-  <!-- Overlay para oscurecer fondo -->
   <div class="overlay"></div>
 
-  <!-- Contenedor principal -->
   <div class="container">
     <h1>Proyecto con APIs y Chat de Dinosaurios</h1>
 
-    <!-- BOTONES YOUTUBE Y FACEBOOK -->
+    <!-- REDES -->
     <h2>Redes Sociales</h2>
     <div class="social-buttons">
       <button onclick="cargarVideosYouTube()">Ver videos YouTube</button>
       <button onclick="cargarPostsFacebook()">Ver posts Facebook</button>
     </div>
 
-    <!-- Contenedor dinámico YouTube -->
     <div id="youtube-videos"></div>
-
-    <!-- Contenedor dinámico Facebook -->
     <div id="facebook-posts"></div>
 
-    <!-- VERIFICACIÓN 2 PASOS SIMPLE -->
+    <!-- 2FA -->
     <h2>Verificación en 2 pasos</h2>
     <input type="text" id="codigo" placeholder="Ingresa código">
     <button onclick="verificarCodigo()">Verificar</button>
     <p id="verificacion-msg"></p>
 
     <!-- MAPA -->
-    <h2>Mapa</h2>
+    <h2>Mapa (Ciudad de México)</h2>
     <div id="map"></div>
 
     <!-- IA -->
@@ -44,12 +49,20 @@
     <p id="respuesta"></p>
   </div>
 
-  <!-- Scripts -->
+  <!-- Script principal -->
   <script src="script.js"></script>
-  
-  <!-- Google Maps -->
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFOwFuxoNRk3NDmSTeui88vUY1nCnLTFI&callback=initMap">
+
+  <!-- Google Maps API -->
+  <script>
+    function cargarMapa() {
+      const script = document.createElement("script");
+      script.src = "https://maps.googleapis.com/maps/api/js?key=TU_GOOGLE_MAPS_KEY&callback=initMap";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    window.onload = cargarMapa;
   </script>
 </body>
 </html>

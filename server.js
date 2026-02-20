@@ -7,28 +7,37 @@ const axios = require("axios");
 
 const app = express();
 
-// 🔹 Middlewares
+////////////////////////////////////////////////////
+// MIDDLEWARES
+////////////////////////////////////////////////////
 app.use(cors());
 app.use(express.json());
-
-// 🔹 Inicializar OpenAI
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("⚠️ OPENAI_API_KEY no definida. La IA no funcionará.");
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ""
-});
-
-// 🔹 Servir archivos estáticos (index.html, style.css, script.js)
 app.use(express.static(path.join(__dirname)));
 
-// 🔹 Ruta principal
+////////////////////////////////////////////////////
+// VALIDACIÓN DE KEYS
+////////////////////////////////////////////////////
+console.log("OPENAI:", process.env.OPENAI_API_KEY ? "✅ Cargada" : "❌ No cargada");
+console.log("YOUTUBE:", process.env.YOUTUBE_API_KEY ? "✅ Cargada" : "❌ No cargada");
+console.log("FACEBOOK:", process.env.FB_ACCESS_TOKEN ? "✅ Cargada" : "❌ No cargada");
+
+////////////////////////////////////////////////////
+// INICIALIZAR OPENAI
+////////////////////////////////////////////////////
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+////////////////////////////////////////////////////
+// RUTA PRINCIPAL
+////////////////////////////////////////////////////
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// 🔹 Ruta de chat IA sobre dinosaurios
+////////////////////////////////////////////////////
+// CHAT IA DINOSAURIOS
+////////////////////////////////////////////////////
 app.post("/chat", async (req, res) => {
   try {
     const { pregunta } = req.body;
@@ -46,7 +55,7 @@ app.post("/chat", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Eres un experto en dinosaurios. Solo respondes preguntas sobre dinosaurios, sus especies, hábitats, alimentación y curiosidades."
+          content: "Eres un experto en dinosaurios. Solo respondes preguntas sobre dinosaurios."
         },
         { role: "user", content: pregunta }
       ],
@@ -58,13 +67,73 @@ app.post("/chat", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error en /chat:", error);
-    res.status(500).json({ error: "Error al procesar la solicitud" });
+    console.error("Error IA:", error.response?.data || error.message);
+    res.status(500).json({ error: "Error en OpenAI" });
   }
 });
-console.log("KEY:", process.env.OPENAI_API_KEY ? "Cargada" : "No cargada");
-// 🔹 Iniciar servidor con puerto dinámico para Render
+
+////////////////////////////////////////////////////
+// YOUTUBE API
+////////////////////////////////////////////////////
+app.get("/youtube", async (req, res) => {
+  try {
+    if (!process.env.YOUTUBE_API_KEY) {
+      return res.status(500).json({ error: "YouTube API Key no definida" });
+    }
+
+    const response = await axios.get(
+      "https://www.googleapis.com/youtube/v3/search",
+      {
+        params: {
+          part: "snippet",
+          q: "dinosaurios",
+          type: "video",
+          maxResults: 6,
+          key: process.env.YOUTUBE_API_KEY
+        }
+      }
+    );
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Error YouTube:", error.response?.data || error.message);
+    res.status(500).json({ error: "Error en YouTube API" });
+  }
+});
+
+////////////////////////////////////////////////////
+// FACEBOOK GRAPH API
+////////////////////////////////////////////////////
+app.get("/facebook", async (req, res) => {
+  try {
+    if (!process.env.FB_PAGE_ID || !process.env.FB_ACCESS_TOKEN) {
+      return res.status(500).json({ error: "Credenciales Facebook no definidas" });
+    }
+
+    const response = await axios.get(
+      `https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/posts`,
+      {
+        params: {
+          fields: "message,permalink_url",
+          access_token: process.env.FB_ACCESS_TOKEN
+        }
+      }
+    );
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Error Facebook:", error.response?.data || error.message);
+    res.status(500).json({ error: "Error en Facebook Graph API" });
+  }
+});
+
+////////////////////////////////////////////////////
+// INICIAR SERVIDOR
+////////////////////////////////////////////////////
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
