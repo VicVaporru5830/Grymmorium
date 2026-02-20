@@ -49,40 +49,40 @@ app.post("/chat", async (req, res) => {
       });
     }
 
+    // ✅ Router (OpenAI-compatible): /v1/chat/completions
     const response = await axios.post(
-      // 🔄 CAMBIO: usar Inference API estable en lugar del router
-      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      "https://router.huggingface.co/v1/chat/completions",
       {
-        inputs: `<s>[INST] Eres un experto en dinosaurios. Responde claro y profesional. 
-Pregunta: ${pregunta} [/INST]`,
-        parameters: {
-          max_new_tokens: 250,
-          temperature: 0.7,
-          return_full_text: false
-        },
-        // 🧊 Evita fallos si el modelo está "cold"
-        options: { wait_for_model: true }
+        model: "mistralai/Mistral-7B-Instruct-v0.2",
+        messages: [
+          {
+            role: "system",
+            content: "Eres un experto en dinosaurios. Responde claro y profesional."
+          },
+          {
+            role: "user",
+            content: `Pregunta: ${pregunta}`
+          }
+        ],
+        max_tokens: 250,
+        temperature: 0.7,
+        stream: false
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.HF_API_KEY}`,
           "Content-Type": "application/json",
-          // ✅ Aceptar JSON explícitamente
-          "Accept": "application/json"
+          Accept: "application/json"
         },
         timeout: 60000
       }
     );
 
     const texto =
-      response.data?.[0]?.generated_text ||
-      response.data?.generated_text ||
+      response.data?.choices?.[0]?.message?.content?.trim() ||
       "Sin respuesta del modelo";
 
-    res.json({
-      respuesta: texto.trim()
-    });
-
+    res.json({ respuesta: texto });
   } catch (error) {
     console.error("🔥 ERROR HUGGING FACE:", error.response?.data || error.message);
 
