@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proyecto Web Completo</title>
+  <title>Ark</title>
   <link rel="stylesheet" href="style.css">
 
   <style>
@@ -13,9 +13,8 @@
       margin-top: 10px;
       border-radius: 10px;
     }
-
     .error {
-      color: red;
+      color: #ff4a4a;
       font-weight: bold;
       margin-top: 10px;
     }
@@ -26,7 +25,7 @@
   <div class="overlay"></div>
 
   <div class="container">
-    <h1>Proyecto con APIs y Chat de Dinosaurios</h1>
+    <h1>ARK</h1>
 
     <!-- REDES -->
     <h2>Redes Sociales</h2>
@@ -57,6 +56,22 @@
     <input type="text" id="pregunta" placeholder="Pregunta sobre dinosaurios">
     <button onclick="preguntarIA()">Preguntar</button>
     <p id="respuesta"></p>
+
+    <!-- STREAMING -->
+    <h2>Mis Videos (Streaming)</h2>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+      <label>Subir video MP4/WEBM/OGG:</label>
+      <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/ogg" required>
+      <button type="submit">Subir video</button>
+      <p id="upload-status"></p>
+    </form>
+
+    <div>
+      <button onclick="loadVideos()">Actualizar lista</button>
+    </div>
+
+    <div id="videos-grid"></div>
   </div>
 
   <script src="script.js"></script>
