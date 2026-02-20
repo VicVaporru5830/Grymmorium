@@ -61,7 +61,7 @@ app.post("/chat", async (req, res) => {
     res.status(500).json({ error: "Error al procesar la solicitud" });
   }
 });
-
+console.log("KEY:", process.env.OPENAI_API_KEY ? "Cargada" : "No cargada");
 // 🔹 Iniciar servidor con puerto dinámico para Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
