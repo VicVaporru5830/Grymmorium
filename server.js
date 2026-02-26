@@ -24,17 +24,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
+// === CORREO (SendGrid) ===
+const { sendReceiptEmail } = require("./mailer");
+
 const app = express();
 
 ////////////////////////////////////////////////////
-// MIDDLEWARES
-////////////////////////////////////////////////////
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));
-
-////////////////////////////////////////////////////
-// LOG DE VARIABLES
+// LOG DE VARIABLES (después de dotenv.config)
 ////////////////////////////////////////////////////
 console.log("===== VARIABLES DE ENTORNO =====");
 console.log("HF:", process.env.HF_API_KEY ? "✅ Cargada" : "❌ No cargada");
@@ -46,8 +42,77 @@ console.log("S3_REGION:", process.env.S3_REGION || "❌ Vacía");
 console.log("S3_ENDPOINT:", process.env.S3_ENDPOINT ? "✅ Cargada" : "❌ No cargada");
 console.log("S3_FORCE_PATH_STYLE:", process.env.S3_FORCE_PATH_STYLE || "❌ Vacía");
 console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY ? "✅ Cargada" : "❌ No cargada");
+console.log("STRIPE_WEBHOOK_SECRET:", process.env.STRIPE_WEBHOOK_SECRET ? "✅ Cargada" : "❌ No cargada");
 console.log("BASE_URL:", process.env.BASE_URL || "❌ Vacía");
+console.log("SENDGRID_API_KEY:", process.env.SENDGRID_API_KEY ? "✅ Cargada" : "❌ No cargada");
+console.log("MAIL_FROM:", process.env.MAIL_FROM ? "✅ Cargada" : "❌ No cargada");
+console.log("SELLER_EMAIL:", process.env.SELLER_EMAIL ? "✅ Cargada" : "—");
 console.log("=================================");
+
+////////////////////////////////////////////////////
+// MIDDLEWARES (orden importante para webhook)
+////////////////////////////////////////////////////
+app.use(cors());
+app.use(express.static(path.join(__dirname))); // sirve index.html y assets
+
+// === WEBHOOK DE STRIPE (raw body) ===
+// ⚠️ Debe ir ANTES de app.use(express.json())
+app.post(
+  "/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      if (!stripe) return res.status(500).send("Stripe no configurado");
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.error("❌ Falta STRIPE_WEBHOOK_SECRET");
+        return res.status(500).send("Falta STRIPE_WEBHOOK_SECRET");
+      }
+
+      const sig = req.headers["stripe-signature"];
+      let event;
+
+      try {
+        event = stripe.webhooks.constructEvent(
+          req.body, // cuerpo crudo (Buffer)
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } catch (err) {
+        console.error("❌ Firma inválida del webhook:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+
+        // Obtener line items para el ticket
+        let lineItems = { data: [] };
+        try {
+          lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+        } catch (liErr) {
+          console.error("⚠️ No se pudieron obtener line items:", liErr.message);
+        }
+
+        // Enviar correo (no bloquear respuesta a Stripe por errores de email)
+        try {
+          await sendReceiptEmail({ session, lineItems: lineItems.data });
+        } catch (mailErr) {
+          console.error("Error enviando ticket:", mailErr.message);
+        }
+      }
+
+      // Confirmar recepción a Stripe
+      return res.json({ received: true });
+    } catch (e) {
+      console.error("🔥 Error en webhook:", e.message);
+      // Responder 200 para evitar reintentos agresivos si algo inesperado ocurre
+      return res.status(200).end();
+    }
+  }
+);
+
+// Ahora sí, parseo JSON para el resto de rutas
+app.use(express.json());
 
 ////////////////////////////////////////////////////
 // RUTA PRINCIPAL
@@ -57,7 +122,7 @@ app.get("/", (req, res) => {
 });
 
 ////////////////////////////////////////////////////
-// CHAT IA (HUGGING FACE ROUTER FUNCIONAL + LÍMITE DINOSAURIOS)
+// CHAT IA (Hugging Face)
 ////////////////////////////////////////////////////
 app.post("/chat", async (req, res) => {
   try {
@@ -133,7 +198,6 @@ app.get("/facebook", async (req, res) => {
       return res.status(500).json({ error: "Credenciales de Facebook no configuradas" });
     }
 
-    // ⚠️ Si FB_PAGE_ID es de un grupo, /posts no funciona con la Graph API actual.
     const response = await axios.get(
       `https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/posts`,
       {
@@ -157,14 +221,14 @@ app.get("/facebook", async (req, res) => {
 const s3 = new S3Client({
   region: process.env.S3_REGION || "auto",
   endpoint: process.env.S3_ENDPOINT || undefined,
-  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" || !!process.env.S3_ENDPOINT, // R2/B2 requieren path-style
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" || !!process.env.S3_ENDPOINT,
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
   },
 });
 
-// Multer → disco temporal (no RAM), + filtro MIME
+// Multer → disco temporal + filtro MIME
 const allowedMimes = ["video/mp4", "video/webm", "video/ogg"];
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, os.tmpdir()),
@@ -203,7 +267,6 @@ app.post("/upload", upload.single("video"), async (req, res) => {
       Key: key,
       Body: fs.createReadStream(tempPath),
       ContentType: contentType,
-      // ⚠️ R2 no usa ACLs; se maneja por credenciales/políticas
     });
 
     const result = await s3.send(put);
@@ -232,7 +295,6 @@ app.get("/videos", async (req, res) => {
     const out = await s3.send(list);
     const contents = out.Contents || [];
 
-    // Ordena más recientes primero (opcional, mejora UX del "featured")
     contents.sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified));
 
     const results = await Promise.all(
@@ -258,7 +320,7 @@ app.get("/videos", async (req, res) => {
 });
 
 ////////////////////////////////////////////////////
-// PAGOS — Stripe Checkout (la opción más rápida)
+// PAGOS — Stripe Checkout
 ////////////////////////////////////////////////////
 app.post("/crear-pago", async (req, res) => {
   try {
@@ -266,7 +328,7 @@ app.post("/crear-pago", async (req, res) => {
       return res.status(500).json({ error: "Stripe no configurado (STRIPE_SECRET_KEY/BASE_URL)" });
     }
 
-    // ⚙️ Ajusta el monto, concepto y moneda a lo que quieras cobrar
+    // Ajustado a $12.00 MXN
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -274,7 +336,7 @@ app.post("/crear-pago", async (req, res) => {
           price_data: {
             currency: "mxn",
             product_data: { name: "Donación ARK" },
-            unit_amount: 5000, // 50.00 MXN (centavos)
+            unit_amount: 1200, // 12.00 MXN (centavos)
           },
           quantity: 1,
         },
