@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ark</title>
 
   <!-- Estilos principales -->
@@ -15,6 +16,7 @@
       margin-top: 10px;
       border-radius: 10px;
     }
+
     .error {
       color: #ff4a4a;
       font-weight: bold;
@@ -63,7 +65,7 @@
 
     <div class="player">
       <div class="player-wrap">
-        <video id="main-video" controls playsinline preload="metadata" src=""></video>
+        <video id="main-video" controls playsinline preload="metadata"></video>
 
         <div class="player-overlay">
           <span id="main-filename">Selecciona un video…</span>
@@ -81,12 +83,8 @@
       Si te gusta este proyecto, puedes apoyar con una donación. 🙌
     </p>
 
-    <!-- NUEVO: CORREO PARA TICKET -->
-    <input id="buyerEmail" 
-           type="email" 
-           placeholder="Tu correo para enviarte el ticket" 
-           style="width:100%; padding:10px; margin-bottom:10px;" 
-           required />
+    <!-- CORREO -->
+    <input id="buyerEmail" type="email" placeholder="Tu correo para enviarte el ticket" required />
 
     <div style="display:flex; justify-content:center; margin-bottom: 20px;">
       <button onclick="pagar()">💳 Pagar $12 MXN</button>
@@ -102,35 +100,25 @@
       <p id="upload-status"></p>
     </form>
 
-    <div>
-      <button id="refreshBtn" type="button">Actualizar lista</button>
-    </div>
-
+    <button id="refreshBtn" type="button">Actualizar lista</button>
     <div id="videos-grid"></div>
 
-
-    <!-- ==================================== -->
-    <!--        VISUALIZADOR 3D NUEVO         -->
-    <!-- ==================================== -->
+    <!-- VISUALIZADOR 3D -->
     <h2>Modelo 3D</h2>
 
-    <div id="viewer3d"
-         style="width:100%; height:400px; background:#111; border-radius:10px;">
-    </div>
+    <div id="viewer3d" style="width:100%; height:400px; background:#111; border-radius:10px;"></div>
 
     <input type="file" id="modelInput" accept=".gltf,.glb,.obj,.stl" />
     <button onclick="cargarModelo3D()">Cargar modelo 3D</button>
-
   </div>
 
-  <!-- JS -->
+  <!-- JS PRINCIPAL -->
   <script src="script.js"></script>
 
-  <!-- THREE.JS para el render 3D -->
+  <!-- THREE.JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/OBJLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/STLLoader.js"></script>
+vr.net/npm/three@0.128/examples/js/loaders/STLLoader.js
 
   <!-- Google Maps -->
   <script>

@@ -1,4 +1,6 @@
-/* === FONDO GENERAL === */
+/* =========================================== */
+/*               FONDO GENERAL                 */
+/* =========================================== */
 body {
   margin: 0;
   padding: 0;
@@ -17,7 +19,9 @@ body {
   z-index: 0;
 }
 
-/* === CONTENEDOR === */
+/* =========================================== */
+/*                 CONTENEDOR                   */
+/* =========================================== */
 .container {
   position: relative;
   z-index: 1;
@@ -31,7 +35,9 @@ body {
   box-shadow: 0 10px 25px rgba(0,0,0,0.25);
 }
 
-/* TÍTULOS */
+/* =========================================== */
+/*                   TITULOS                    */
+/* =========================================== */
 h1, h2 {
   text-align: center;
   color: #5e0a18;
@@ -40,7 +46,9 @@ h1, h2 {
   margin-top: 8px;
 }
 
-/* BOTONES */
+/* =========================================== */
+/*                  BOTONES                     */
+/* =========================================== */
 button {
   padding: 12px 14px;
   border: none;
@@ -52,13 +60,35 @@ button {
   margin: 5px 6px 5px 0;
   transition: 0.2s ease;
 }
+
 button:hover {
   background-color: #4e0a18;
   transform: translateY(-1px);
 }
 
-/* INPUTS */
+/* Botón para pagar */
+button[onclick="pagar()"] {
+  width: 100%;
+  font-size: 18px;
+  padding: 14px;
+  border-radius: 14px;
+  margin-top: 10px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.20);
+}
+
+/* Botón de cargar modelo 3D */
+button[onclick="cargarModelo3D()"] {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+/* =========================================== */
+/*                     INPUTS                   */
+/* =========================================== */
 input[type="text"],
+input[type="email"],
 input[type="file"] {
   width: 100%;
   padding: 12px;
@@ -70,8 +100,18 @@ input[type="file"] {
   color: #3b0c13;
 }
 
-/* CAJAS */
-#respuesta, #verificacion-msg, #upload-status {
+input:focus {
+  outline: none;
+  border-color: #7a1026;
+  box-shadow: 0 0 8px rgba(122,16,38,0.35);
+}
+
+/* =========================================== */
+/*                     CAJAS                    */
+/* =========================================== */
+#respuesta,
+#verificacion-msg,
+#upload-status {
   margin-top: 10px;
   padding: 12px;
   border-radius: 10px;
@@ -81,7 +121,9 @@ input[type="file"] {
   color: #330610;
 }
 
-/* MAPA */
+/* =========================================== */
+/*                 MAPA GOOGLE                  */
+/* =========================================== */
 #map {
   margin-top: 15px;
   width: 100%;
@@ -90,15 +132,20 @@ input[type="file"] {
   border: 3px solid #7a1026;
 }
 
-/* REDES */
-#youtube-videos, #facebook-posts {
+/* =========================================== */
+/*                 SECCIÓN REDES                */
+/* =========================================== */
+#youtube-videos,
+#facebook-posts {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
   justify-content: center;
   margin-bottom: 20px;
 }
-.video, .fb-post {
+
+.video,
+.fb-post {
   background: #ffffff;
   padding: 10px;
   border-radius: 12px;
@@ -107,16 +154,16 @@ input[type="file"] {
   max-width: 300px;
 }
 
-/* ======================== */
-/*    PLAYER PRINCIPAL     */
-/* ======================== */
+/* =========================================== */
+/*           PLAYER PRINCIPAL (VIDEO)          */
+/* =========================================== */
 .player {
   background: #000;
   border-radius: 14px;
   border: 2px solid #7a1026;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
 .player-wrap {
@@ -124,25 +171,25 @@ input[type="file"] {
   background: #000;
   aspect-ratio: 16 / 9;
   width: 100%;
-  overflow: hidden;
 }
 
 #main-video {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #000;
 }
 
-/* Overlay título principal */
+/* Overlay título */
 .player-overlay {
   position: absolute;
-  left: 0; top: 0; right: 0;
+  left: 0;
+  top: 0;
+  right: 0;
   padding: 10px 12px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
   color: #fff;
-  pointer-events: none;
 }
+
 #main-filename {
   font-weight: 700;
   text-shadow: 0 2px 6px rgba(0,0,0,.6);
@@ -151,13 +198,13 @@ input[type="file"] {
 .player-meta {
   background: #111;
   color: #ddd;
-  padding: 10px 12px 12px;
+  padding: 10px 12px;
   font-size: 13px;
 }
 
-/* ======================== */
-/*    MINIATURAS GRID      */
-/* ======================== */
+/* =========================================== */
+/*                 MINIATURAS GRID             */
+/* =========================================== */
 #videos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -170,10 +217,10 @@ input[type="file"] {
   border-radius: 12px;
   border-left: 5px solid #7a1026;
   box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-  overflow: hidden;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: 0.2s ease;
   cursor: pointer;
 }
+
 .video-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 24px rgba(0,0,0,0.18);
@@ -192,54 +239,67 @@ input[type="file"] {
   object-fit: cover;
 }
 
-/* Overlay nombre miniatura */
 .video-overlay {
   position: absolute;
-  left: 0; right: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding: 10px 12px;
   background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0));
   color: #fff;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity .18s ease, transform .18s ease;
-  pointer-events: none;
+  transition: 0.2s ease;
 }
+
 .video-card:hover .video-overlay {
   opacity: 1;
   transform: translateY(0);
 }
 
-.video-filename {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-}
-
-/* Botón play tenue */
 .play-badge {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   color: #fff;
-  pointer-events: none;
-  opacity: .0;
-  transition: opacity .18s ease;
+  opacity: 0;
+  transition: 0.18s ease;
 }
+
 .play-badge svg {
   width: 54px;
   height: 54px;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
 }
+
 .video-card:hover .play-badge {
   opacity: .15;
 }
 
-.video-meta {
-  padding: 10px 12px 12px;
-  font-size: 12px;
-  color: #555;
+/* =========================================== */
+/*                 VISOR 3D                    */
+/* =========================================== */
+#viewer3d {
+  width: 100%;
+  height: 400px;
+  background: #0c0c0c;
+  border-radius: 14px;
+  border: 3px solid #7a1026;
+  margin-top: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+/* =========================================== */
+/*         ADAPTACIÓN A DISPOSITIVOS           */
+/* =========================================== */
+@media (max-width: 600px) {
+  #viewer3d {
+    height: 300px;
+  }
+
+  button {
+    width: 100%;
+  }
 }

@@ -306,7 +306,7 @@ async function pagar() {
 
     // Si luego tienes un carrito real, rellena 'items' desde tu estado.
     const items = [
-      { name: "Donación ARK", qty: 1, price: 12.00 }
+      { name: "Donación ARK", qty: 1, price: 12.0 }
     ];
 
     const res = await fetch(`${window.location.origin}/crear-pago`, {
@@ -332,6 +332,155 @@ async function pagar() {
     console.error("❌ /crear-pago error:", e);
   }
 }
+
+//////////////////////
+// VISOR 3D (Three.js)
+//////////////////////
+let scene, camera, renderer, model, threeContainer;
+
+function init3D() {
+  threeContainer = document.getElementById("viewer3d");
+  if (!threeContainer || !window.THREE) return; // si no existe el div o no cargó three.js, no iniciar
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x111111);
+
+  camera = new THREE.PerspectiveCamera(
+    60,
+    threeContainer.clientWidth / threeContainer.clientHeight,
+    0.1,
+    2000
+  );
+  camera.position.set(2, 2, 4);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
+  threeContainer.innerHTML = ""; // limpia si había algo
+  threeContainer.appendChild(renderer.domElement);
+
+  // Luces
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+  hemi.position.set(0, 1, 0);
+  scene.add(hemi);
+
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir.position.set(5, 10, 7);
+  scene.add(dir);
+
+  animate3D();
+
+  // Resize
+  window.addEventListener("resize", onResize3D);
+}
+
+function onResize3D() {
+  if (!renderer || !camera || !threeContainer) return;
+  const w = threeContainer.clientWidth;
+  const h = threeContainer.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+  if (model) model.rotation.y += 0.005;
+  if (renderer && scene && camera) renderer.render(scene, camera);
+}
+
+function fitModel(object3D) {
+  // centra y escala el modelo para que quepa en cámara
+  const box = new THREE.Box3().setFromObject(object3D);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  // Re-centra el modelo
+  object3D.position.x += (object3D.position.x - center.x);
+  object3D.position.y += (object3D.position.y - center.y);
+  object3D.position.z += (object3D.position.z - center.z);
+
+  // Calcula distancia para encuadre
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const fov = camera.fov * (Math.PI / 180);
+  const dist = maxDim / (2 * Math.tan(fov / 2));
+  camera.position.set(0, maxDim * 0.5, dist * 1.4);
+  camera.lookAt(0, 0, 0);
+}
+
+function cargarModelo3D() {
+  const fileInput = document.getElementById("modelInput");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    alert("Selecciona un modelo 3D (.gltf, .glb, .obj, .stl)");
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const ext = file.name.split(".").pop().toLowerCase();
+
+  if (!window.THREE) {
+    alert("No se cargó Three.js correctamente.");
+    return;
+  }
+
+  // Limpia modelo anterior
+  if (model) {
+    scene.remove(model);
+    model.traverse?.((c) => {
+      if (c.geometry) c.geometry.dispose?.();
+      if (c.material) {
+        if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose?.());
+        else c.material.dispose?.();
+      }
+    });
+    model = null;
+  }
+
+  // Selecciona loader por extensión
+  if ((ext === "gltf" || ext === "glb") && THREE.GLTFLoader) {
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      url,
+      (gltf) => {
+        model = gltf.scene || gltf.scenes?.[0];
+        scene.add(model);
+        fitModel(model);
+      },
+      undefined,
+      (err) => alert("Error cargando GLTF/GLB: " + err.message)
+    );
+  } else if (ext === "obj" && THREE.OBJLoader) {
+    const loader = new THREE.OBJLoader();
+    loader.load(
+      url,
+      (obj) => {
+        model = obj;
+        scene.add(model);
+        fitModel(model);
+      },
+      undefined,
+      (err) => alert("Error cargando OBJ: " + err.message)
+    );
+  } else if (ext === "stl" && THREE.STLLoader) {
+    const loader = new THREE.STLLoader();
+    loader.load(
+      url,
+      (geometry) => {
+        const material = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.1, roughness: 0.8 });
+        model = new THREE.Mesh(geometry, material);
+        scene.add(model);
+        fitModel(model);
+      },
+      undefined,
+      (err) => alert("Error cargando STL: " + err.message)
+    );
+  } else {
+    alert("Formato no compatible o loader no disponible.");
+  }
+}
+
 //////////////////////
 // INIT
 //////////////////////
@@ -351,5 +500,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  loadVideos(); // primera carga: destaca el primero
+  // Carga inicial de videos
+  loadVideos();
+
+  // Inicia visor 3D
+  init3D();
 });
