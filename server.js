@@ -66,14 +66,17 @@ app.use(
   })
 );
 
+// Estáticos (sirve index.html, script.js, style.css, etc.)
 app.use(express.static(path.join(__dirname)));
 
+// Logging
 app.use((req, _res, next) => {
   console.log(`➡️  ${req.method} ${req.url}`);
   next();
 });
 
 /* ----------------------- STRIPE WEBHOOK ----------------------- */
+// ⚠️ Debe ir ANTES de express.json()
 app.post(
   "/stripe-webhook",
   express.raw({ type: "application/json" }),
@@ -95,11 +98,11 @@ app.post(
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      /* --- CUANDO SE COMPLETA EL PAGO --- */
+      // Evento de éxito en Checkout
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
 
-        // Obtener productos
+        // Obtener line items
         let lineItems = { data: [] };
         try {
           lineItems = await stripe.checkout.sessions.listLineItems(session.id);
@@ -107,14 +110,13 @@ app.post(
           console.error("⚠️ Error listando line items:", err.message);
         }
 
-        // Envío de ticket
+        // Enviar ticket (con PDF si ya integraste el generador)
         try {
           await sendReceiptEmail({
             session,
             lineItems: lineItems.data,
           });
-
-          console.log("📧 Ticket enviado a:", session.customer_details?.email);
+          console.log("📧 Ticket enviado a:", session.customer_details?.email || session.customer_email);
         } catch (mailErr) {
           console.error("❌ Error enviando email:", mailErr.message);
         }
@@ -123,15 +125,15 @@ app.post(
       return res.json({ received: true });
     } catch (e) {
       console.error("🔥 Error Webhook:", e.message);
-      return res.status(200).end();
+      return res.status(200).end(); // evita reintentos agresivos
     }
   }
 );
 
-// Después del webhook:
+// Ahora sí, JSON para el resto
 app.use(express.json());
 
-/* ------------------------- RUTAS ------------------------- */
+/* ------------------------- RUTAS BÁSICAS ------------------------- */
 app.get("/health", (req, res) => {
   res.json({
     ok: true,
@@ -227,7 +229,7 @@ app.get("/facebook", async (_req, res) => {
 });
 
 /* ============================================================
-        STREAMING — CLOUDFLARE R2 (UPLOAD + LISTADO)
+        CLOUDFLARE R2 — CLIENTE S3 (VIDEOS + MODELOS 3D)
 ============================================================ */
 const s3 = new S3Client({
   region: process.env.S3_REGION || "auto",
@@ -239,28 +241,30 @@ const s3 = new S3Client({
   },
 });
 
-const allowedMimes = ["video/mp4", "video/webm", "video/ogg"];
-
+/* ------------------------- MULTER (disco temporal) ------------------------- */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, os.tmpdir()),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || ".mp4";
+    const ext = path.extname(file.originalname).toLowerCase() || ".bin";
     cb(null, `${uuidv4()}${ext}`);
   },
 });
 
-const upload = multer({
+/* ============================ VIDEOS ============================ */
+const allowedVideoMimes = ["video/mp4", "video/webm", "video/ogg"];
+
+const uploadVideo = multer({
   storage,
-  limits: { fileSize: 1024 * 1024 * 500 },
+  limits: { fileSize: 1024 * 1024 * 500 }, // 500MB
   fileFilter: (req, file, cb) => {
-    if (!allowedMimes.includes(file.mimetype)) {
-      return cb(new Error("Formato inválido"));
+    if (!allowedVideoMimes.includes(file.mimetype)) {
+      return cb(new Error("Formato inválido (solo MP4/WEBM/OGG)."));
     }
     cb(null, true);
   },
 });
 
-app.post("/upload", upload.single("video"), async (req, res) => {
+app.post("/upload", uploadVideo.single("video"), async (req, res) => {
   const temp = req.file?.path;
   try {
     if (!process.env.S3_BUCKET)
@@ -283,7 +287,7 @@ app.post("/upload", upload.single("video"), async (req, res) => {
     fs.unlink(temp, () => {});
     res.json({ ok: true, key });
   } catch (err) {
-    fs.unlink(temp, () => {});
+    if (temp) fs.unlink(temp, () => {});
     res.status(500).json({ error: err.message });
   }
 });
@@ -327,6 +331,100 @@ app.get("/videos", async (_req, res) => {
   }
 });
 
+/* ============================ MODELOS 3D ============================ */
+/** Acepta extensiones comunes. Ojo: algunos navegadores suben OBJ/STL como application/octet-stream. */
+const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
+
+const uploadModel = multer({
+  storage,
+  limits: { fileSize: 1024 * 1024 * 100 }, // 100MB (ajusta a tu gusto)
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowedModelExt.has(ext)) {
+      return cb(new Error("Solo se permiten modelos .glb, .gltf, .obj, .stl"));
+    }
+    cb(null, true);
+  },
+});
+
+/** Subir un modelo: campo 'model' */
+app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
+  const temp = req.file?.path;
+  try {
+    if (!process.env.S3_BUCKET)
+      return res.status(500).json({ error: "Falta S3_BUCKET" });
+
+    if (!req.file)
+      return res.status(400).json({ error: "No file 'model'" });
+
+    const key = `models/${req.file.filename}`;
+    const contentType = mime.contentType(path.extname(req.file.originalname)) || "application/octet-stream";
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET,
+        Key: key,
+        Body: fs.createReadStream(temp),
+        ContentType: contentType,
+      })
+    );
+
+    fs.unlink(temp, () => {});
+
+    // Te regreso también una URL prefirmada listita para usar 1 hora
+    const url = await getSignedUrl(
+      s3,
+      new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }),
+      { expiresIn: 3600 }
+    );
+
+    res.json({ ok: true, key, url });
+  } catch (err) {
+    if (temp) fs.unlink(temp, () => {});
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Listar modelos */
+app.get("/models", async (_req, res) => {
+  try {
+    if (!process.env.S3_BUCKET)
+      return res.status(500).json({ error: "Falta S3_BUCKET" });
+
+    const list = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.S3_BUCKET,
+        Prefix: "models/",
+      })
+    );
+
+    const items = list.Contents || [];
+    items.sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified));
+
+    const result = await Promise.all(
+      items
+        .filter((obj) => obj.Key && !obj.Key.endsWith("/"))
+        .map(async (obj) => ({
+          key: obj.Key,
+          size: obj.Size,
+          lastModified: obj.LastModified,
+          url: await getSignedUrl(
+            s3,
+            new GetObjectCommand({
+              Bucket: process.env.S3_BUCKET,
+              Key: obj.Key,
+            }),
+            { expiresIn: 3600 }
+          ),
+        }))
+    );
+
+    res.json({ models: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ============================================================
                         PAGOS STRIPE
 ============================================================ */
@@ -340,7 +438,7 @@ app.post("/crear-pago", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: buyerEmail, // ← CORREO AUTOMÁTICO A STRIPE
+      customer_email: buyerEmail, // envía el correo capturado al Checkout
       line_items: [
         {
           price_data: {
@@ -360,6 +458,8 @@ app.post("/crear-pago", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* --------------------- DEBUG ENVÍO DE CORREO --------------------- */
 app.post("/debug-send", async (req, res) => {
   try {
     const to = (req.body?.to || "").trim();
@@ -378,9 +478,7 @@ app.post("/debug-send", async (req, res) => {
       { description: "Donación ARK", quantity: 1, amount_total: 1200, amount_subtotal: 1035, price: { unit_amount: 1200 } }
     ];
 
-    const { sendReceiptEmail } = require("./mailer");
     await sendReceiptEmail({ session: fakeSession, lineItems: fakeItems });
-
     res.json({ ok: true });
   } catch (e) {
     console.error("❌ /debug-send:", e);

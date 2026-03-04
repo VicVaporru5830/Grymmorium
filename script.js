@@ -305,14 +305,12 @@ async function pagar() {
     }
 
     // Si luego tienes un carrito real, rellena 'items' desde tu estado.
-    const items = [
-      { name: "Donación ARK", qty: 1, price: 12.0 }
-    ];
+    const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
 
     const res = await fetch(`${window.location.origin}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ buyerEmail, items })
+      body: JSON.stringify({ buyerEmail, items }),
     });
 
     if (!res.ok) {
@@ -336,7 +334,30 @@ async function pagar() {
 //////////////////////
 // VISOR 3D (Three.js)
 //////////////////////
-let scene, camera, renderer, model, threeContainer;
+let scene, camera, renderer, model, threeContainer, controls;
+let lastBgDark = true;
+
+/** Overlay de estado en el visor */
+function setModelStatus(msg) {
+  const container = document.getElementById("viewer3d");
+  if (!container) return;
+  let box = document.getElementById("model-status");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "model-status";
+    box.style.position = "absolute";
+    box.style.left = "12px";
+    box.style.bottom = "12px";
+    box.style.background = "rgba(0,0,0,.6)";
+    box.style.color = "#fff";
+    box.style.padding = "6px 10px";
+    box.style.borderRadius = "8px";
+    box.style.fontSize = "12px";
+    container.style.position = "relative";
+    container.appendChild(box);
+  }
+  box.textContent = msg || "";
+}
 
 function init3D() {
   threeContainer = document.getElementById("viewer3d");
@@ -360,7 +381,7 @@ function init3D() {
   threeContainer.appendChild(renderer.domElement);
 
   // Luces
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
   hemi.position.set(0, 1, 0);
   scene.add(hemi);
 
@@ -368,10 +389,36 @@ function init3D() {
   dir.position.set(5, 10, 7);
   scene.add(dir);
 
+  // Controles de órbita (si está cargado el script)
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0, 0);
+  }
+
+  // Drag & Drop
+  threeContainer.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    setModelStatus("Suelta el archivo para cargar…");
+  });
+  threeContainer.addEventListener("dragleave", () => {
+    setModelStatus("Arrastra aquí un .glb/.gltf o usa el botón.");
+  });
+  threeContainer.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (!e.dataTransfer.files?.length) return;
+    const file = e.dataTransfer.files[0];
+    cargarArchivo3D(file);
+  });
+
   animate3D();
 
   // Resize
   window.addEventListener("resize", onResize3D);
+
+  // Mensaje inicial
+  setModelStatus("Arrastra aquí un .glb/.gltf o usa “Cargar modelo 3D”.");
 }
 
 function onResize3D() {
@@ -385,8 +432,22 @@ function onResize3D() {
 
 function animate3D() {
   requestAnimationFrame(animate3D);
-  if (model) model.rotation.y += 0.005;
+  if (controls) controls.update();
   if (renderer && scene && camera) renderer.render(scene, camera);
+}
+
+function clearModel3D() {
+  if (!model) return;
+  scene.remove(model);
+  model.traverse?.((c) => {
+    if (c.geometry) c.geometry.dispose?.();
+    if (c.material) {
+      if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose?.());
+      else c.material.dispose?.();
+    }
+    if (c.texture) c.texture.dispose?.();
+  });
+  model = null;
 }
 
 function fitModel(object3D) {
@@ -397,88 +458,130 @@ function fitModel(object3D) {
   box.getSize(size);
   box.getCenter(center);
 
-  // Re-centra el modelo
+  // Re-centra el modelo al origen
   object3D.position.x += (object3D.position.x - center.x);
   object3D.position.y += (object3D.position.y - center.y);
   object3D.position.z += (object3D.position.z - center.z);
 
   // Calcula distancia para encuadre
-  const maxDim = Math.max(size.x, size.y, size.z);
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
   const fov = camera.fov * (Math.PI / 180);
   const dist = maxDim / (2 * Math.tan(fov / 2));
   camera.position.set(0, maxDim * 0.5, dist * 1.4);
-  camera.lookAt(0, 0, 0);
+  camera.near = Math.max(0.1, dist / 1000);
+  camera.far = dist * 100;
+  camera.updateProjectionMatrix();
+
+  if (controls) {
+    controls.target.set(0, 0, 0);
+    controls.update();
+  } else {
+    camera.lookAt(0, 0, 0);
+  }
 }
 
 function cargarModelo3D() {
   const fileInput = document.getElementById("modelInput");
   const file = fileInput?.files?.[0];
   if (!file) {
-    alert("Selecciona un modelo 3D (.gltf, .glb, .obj, .stl)");
+    alert("Selecciona un modelo 3D (.gltf, .glb). Para OBJ/STL debes incluir sus loaders.");
     return;
   }
+  cargarArchivo3D(file);
+}
+
+function cargarArchivo3D(file) {
   const url = URL.createObjectURL(file);
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = (file.name || "").split(".").pop().toLowerCase();
+  cargarUrl3D(url, ext, () => URL.revokeObjectURL(url));
+}
 
-  if (!window.THREE) {
-    alert("No se cargó Three.js correctamente.");
-    return;
-  }
+function cargarUrl3D(url, ext, done) {
+  try {
+    setModelStatus("Cargando… 0%");
+    // Limpia modelo anterior
+    clearModel3D();
 
-  // Limpia modelo anterior
-  if (model) {
-    scene.remove(model);
-    model.traverse?.((c) => {
-      if (c.geometry) c.geometry.dispose?.();
-      if (c.material) {
-        if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose?.());
-        else c.material.dispose?.();
-      }
-    });
-    model = null;
-  }
+    const onProgress = (xhr) => {
+      if (!xhr?.lengthComputable) return;
+      const p = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+      setModelStatus(`Cargando… ${p}%`);
+    };
+    const onError = (err) => {
+      console.error("❌ Error cargando modelo:", err);
+      setModelStatus("Error cargando modelo.");
+      done?.();
+    };
 
-  // Selecciona loader por extensión
-  if ((ext === "gltf" || ext === "glb") && THREE.GLTFLoader) {
-    const loader = new THREE.GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        model = gltf.scene || gltf.scenes?.[0];
-        scene.add(model);
-        fitModel(model);
-      },
-      undefined,
-      (err) => alert("Error cargando GLTF/GLB: " + err.message)
-    );
-  } else if (ext === "obj" && THREE.OBJLoader) {
-    const loader = new THREE.OBJLoader();
-    loader.load(
-      url,
-      (obj) => {
-        model = obj;
-        scene.add(model);
-        fitModel(model);
-      },
-      undefined,
-      (err) => alert("Error cargando OBJ: " + err.message)
-    );
-  } else if (ext === "stl" && THREE.STLLoader) {
-    const loader = new THREE.STLLoader();
-    loader.load(
-      url,
-      (geometry) => {
-        const material = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.1, roughness: 0.8 });
-        model = new THREE.Mesh(geometry, material);
-        scene.add(model);
-        fitModel(model);
-      },
-      undefined,
-      (err) => alert("Error cargando STL: " + err.message)
-    );
-  } else {
-    alert("Formato no compatible o loader no disponible.");
+    if ((ext === "gltf" || ext === "glb") && THREE.GLTFLoader) {
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        url,
+        (gltf) => {
+          model = gltf.scene || gltf.scenes?.[0];
+          scene.add(model);
+          fitModel(model);
+          setModelStatus("Listo ✔");
+          done?.();
+        },
+        onProgress,
+        onError
+      );
+    } else if (ext === "obj" && THREE.OBJLoader) {
+      // Si quieres OBJ, agrega el script de OBJLoader en tu index.html
+      const loader = new THREE.OBJLoader();
+      loader.load(
+        url,
+        (obj) => {
+          model = obj;
+          scene.add(model);
+          fitModel(model);
+          setModelStatus("Listo ✔");
+          done?.();
+        },
+        onProgress,
+        onError
+      );
+    } else if (ext === "stl" && THREE.STLLoader) {
+      // Si quieres STL, agrega el script de STLLoader en tu index.html
+      const loader = new THREE.STLLoader();
+      loader.load(
+        url,
+        (geometry) => {
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x888888,
+            metalness: 0.1,
+            roughness: 0.8,
+          });
+          model = new THREE.Mesh(geometry, material);
+          scene.add(model);
+          fitModel(model);
+          setModelStatus("Listo ✔");
+          done?.();
+        },
+        onProgress,
+        onError
+      );
+    } else {
+      alert("Formato no compatible o loader no disponible. Usa .glb/.gltf o agrega los loaders de OBJ/STL en el HTML.");
+      setModelStatus("Formato no soportado.");
+      done?.();
+    }
+  } catch (e) {
+    console.error(e);
+    setModelStatus("Error inesperado cargando modelo.");
+    done?.();
   }
+}
+
+function resetCamara3D() {
+  if (!model) return;
+  fitModel(model);
+}
+
+function toggleFondo3D() {
+  lastBgDark = !lastBgDark;
+  scene.background = new THREE.Color(lastBgDark ? 0x111111 : 0xf3f3f3);
 }
 
 //////////////////////

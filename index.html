@@ -16,11 +16,17 @@
       margin-top: 10px;
       border-radius: 10px;
     }
-
     .error {
       color: #ff4a4a;
       font-weight: bold;
       margin-top: 10px;
+    }
+    /* Opcional: status del visor 3D */
+    #viewer3d { position: relative; }
+    #model-status{
+      position:absolute;left:12px;bottom:12px;
+      background:rgba(0,0,0,.6);color:#fff;
+      padding:6px 10px;border-radius:8px;font-size:12px;
     }
   </style>
 </head>
@@ -62,16 +68,13 @@
 
     <!-- REPRODUCTOR PRINCIPAL -->
     <h2>Reproductor</h2>
-
     <div class="player">
       <div class="player-wrap">
         <video id="main-video" controls playsinline preload="metadata"></video>
-
         <div class="player-overlay">
           <span id="main-filename">Selecciona un video…</span>
         </div>
       </div>
-
       <div class="player-meta">
         <div id="main-extra"></div>
       </div>
@@ -92,7 +95,6 @@
 
     <!-- STREAMING -->
     <h2>Mis Videos (Streaming)</h2>
-
     <form id="uploadForm" enctype="multipart/form-data">
       <label>Subir video MP4/WEBM/OGG:</label>
       <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/ogg" required />
@@ -106,10 +108,18 @@
     <!-- VISUALIZADOR 3D -->
     <h2>Modelo 3D</h2>
 
-    <div id="viewer3d" style="width:100%; height:400px; background:#111; border-radius:10px;"></div>
+    <div id="viewer3d" style="width:100%; height:400px; background:#111; border-radius:10px;">
+      <div id="model-status">
+        Arrastra aquí un .glb/.gltf o usa “Cargar modelo 3D”
+      </div>
+    </div>
 
-    <input type="file" id="modelInput" accept=".gltf,.glb,.obj,.stl" />
-    <button onclick="cargarModelo3D()">Cargar modelo 3D</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+      <input type="file" id="modelInput" accept=".gltf,.glb" />
+      <button onclick="cargarModelo3D()">Cargar modelo 3D</button>
+      <button onclick="resetCamara3D()">Reset cámara</button>
+      <button onclick="toggleFondo3D()">Fondo claro/oscuro</button>
+    </div>
   </div>
 
   <!-- JS PRINCIPAL -->
@@ -118,7 +128,7 @@
   <!-- THREE.JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
-vr.net/npm/three@0.128/examples/js/loaders/STLLoader.js
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
 
   <!-- Google Maps -->
   <script>
