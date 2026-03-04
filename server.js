@@ -360,6 +360,29 @@ app.post("/crear-pago", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.post("/debug-send", async (req, res) => {
+  try {
+    const to = (req.body?.to || "").trim();
+    if (!to) return res.status(400).json({ error: "Falta 'to' en body" });
+
+    const fakeSession = {
+      id: "debug_session_123",
+      amount_total: 1200,
+      currency: "mxn",
+      customer_email: to,
+      customer_details: { email: to },
+    };
+    const fakeItems = [{ description: "Donación ARK", quantity: 1, amount_total: 1200 }];
+
+    const { sendReceiptEmail } = require("./mailer");
+    await sendReceiptEmail({ session: fakeSession, lineItems: fakeItems });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("❌ /debug-send:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 /* ------------------------- SERVIDOR ------------------------- */
 const PORT = process.env.PORT || 3000;
