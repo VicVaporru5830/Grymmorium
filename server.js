@@ -25,7 +25,12 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 // Correo
-const { sendReceiptEmail } = require("./mailer");
+let sendReceiptEmail = async () => {};
+try { // mailer opcional (evita crash si no está el archivo)
+  ({ sendReceiptEmail } = require("./mailer"));
+} catch (e) {
+  console.warn("[WARN] mailer no encontrado, usando función vacía");
+}
 
 const app = express();
 app.set("trust proxy", 1);
@@ -143,7 +148,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "Index.html"));
 });
 
 /* ------------------------- IA ------------------------- */
