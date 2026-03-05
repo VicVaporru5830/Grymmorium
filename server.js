@@ -1,3 +1,5 @@
+"use strict";
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -335,6 +337,14 @@ app.get("/videos", async (_req, res) => {
 /** Acepta extensiones comunes. Ojo: algunos navegadores suben OBJ/STL como application/octet-stream. */
 const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
 
+/** MIME explícitos para modelos 3D (mejor que depender solo de mime-types) */
+const GLTF_MIME_MAP = {
+  ".gltf": "model/gltf+json",
+  ".glb":  "model/gltf-binary",
+  ".obj":  "text/plain",
+  ".stl":  "model/stl",
+};
+
 const uploadModel = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 100 }, // 100MB (ajusta a tu gusto)
@@ -358,7 +368,13 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
       return res.status(400).json({ error: "No file 'model'" });
 
     const key = `models/${req.file.filename}`;
-    const contentType = mime.contentType(path.extname(req.file.originalname)) || "application/octet-stream";
+    const ext = path.extname(req.file.originalname).toLowerCase();
+
+    // MIME explícito + fallback a mime-types + octet-stream
+    const contentType =
+      GLTF_MIME_MAP[ext] ||
+      mime.contentType(ext) ||
+      "application/octet-stream";
 
     await s3.send(
       new PutObjectCommand({
@@ -371,14 +387,14 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
 
     fs.unlink(temp, () => {});
 
-    // Te regreso también una URL prefirmada listita para usar 1 hora
+    // URL prefirmada por 1 hora
     const url = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }),
       { expiresIn: 3600 }
     );
 
-    res.json({ ok: true, key, url });
+    res.json({ ok: true, key, url, contentType });
   } catch (err) {
     if (temp) fs.unlink(temp, () => {});
     res.status(500).json({ error: err.message });

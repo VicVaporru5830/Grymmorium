@@ -143,7 +143,7 @@ async function cargarPostsFacebook() {
 }
 
 //////////////////////
-// STREAMING (Cloudflare R2) — con “player” principal
+// STREAMING (Cloudflare R2)
 //////////////////////
 function getFileNameFromKey(key) {
   try { return (key || "").split("/").pop() || key || "archivo"; }
@@ -304,7 +304,6 @@ async function pagar() {
       return;
     }
 
-    // Si luego tienes un carrito real, rellena 'items' desde tu estado.
     const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
 
     const res = await fetch(`${window.location.origin}/crear-pago`, {
@@ -320,7 +319,6 @@ async function pagar() {
 
     const data = await res.json();
     if (data?.url) {
-      // Redirige a Stripe inmediatamente
       window.location.href = data.url;
     } else {
       alert("No se pudo iniciar el pago (sin URL de Stripe)");
@@ -361,7 +359,10 @@ function setModelStatus(msg) {
 
 function init3D() {
   threeContainer = document.getElementById("viewer3d");
-  if (!threeContainer || !window.THREE) return; // si no existe el div o no cargó three.js, no iniciar
+  if (!threeContainer || !window.THREE) {
+    console.warn("Three.js no está cargado.");
+    return;
+  }
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
@@ -377,6 +378,8 @@ function init3D() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; // colores correctos
+
   threeContainer.innerHTML = ""; // limpia si había algo
   threeContainer.appendChild(renderer.domElement);
 
@@ -389,7 +392,13 @@ function init3D() {
   dir.position.set(5, 10, 7);
   scene.add(dir);
 
-  // Controles de órbita (si está cargado el script)
+  // Helpers para que no se vea “todo negro” sin modelo
+  const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+  scene.add(grid);
+  const axes = new THREE.AxesHelper(1.5);
+  scene.add(axes);
+
+  // Controles de órbita
   if (THREE.OrbitControls) {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -403,7 +412,7 @@ function init3D() {
     setModelStatus("Suelta el archivo para cargar…");
   });
   threeContainer.addEventListener("dragleave", () => {
-    setModelStatus("Arrastra aquí un .glb/.gltf o usa el botón.");
+    setModelStatus("Arrastra aquí un .glb/.gltf/.obj/.stl o usa el botón.");
   });
   threeContainer.addEventListener("drop", (e) => {
     e.preventDefault();
@@ -414,17 +423,21 @@ function init3D() {
 
   animate3D();
 
-  // Resize
+  // Resize (también observa cambios del contenedor)
   window.addEventListener("resize", onResize3D);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(onResize3D);
+    ro.observe(threeContainer);
+  }
 
   // Mensaje inicial
-  setModelStatus("Arrastra aquí un .glb/.gltf o usa “Cargar modelo 3D”.");
+  setModelStatus("Arrastra aquí un .glb/.gltf/.obj/.stl o usa “Cargar modelo 3D”.");
 }
 
 function onResize3D() {
   if (!renderer || !camera || !threeContainer) return;
   const w = threeContainer.clientWidth;
-  const h = threeContainer.clientHeight;
+  const h = threeContainer.clientHeight || 1;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
@@ -458,10 +471,8 @@ function fitModel(object3D) {
   box.getSize(size);
   box.getCenter(center);
 
-  // Re-centra el modelo al origen
-  object3D.position.x += (object3D.position.x - center.x);
-  object3D.position.y += (object3D.position.y - center.y);
-  object3D.position.z += (object3D.position.z - center.z);
+  // Re-centra al origen (corrección: restar el centro)
+  object3D.position.sub(center);
 
   // Calcula distancia para encuadre
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
@@ -484,7 +495,7 @@ function cargarModelo3D() {
   const fileInput = document.getElementById("modelInput");
   const file = fileInput?.files?.[0];
   if (!file) {
-    alert("Selecciona un modelo 3D (.gltf, .glb). Para OBJ/STL debes incluir sus loaders.");
+    alert("Selecciona un modelo 3D (.gltf/.glb/.obj/.stl).");
     return;
   }
   cargarArchivo3D(file);
@@ -499,7 +510,6 @@ function cargarArchivo3D(file) {
 function cargarUrl3D(url, ext, done) {
   try {
     setModelStatus("Cargando… 0%");
-    // Limpia modelo anterior
     clearModel3D();
 
     const onProgress = (xhr) => {
@@ -528,7 +538,6 @@ function cargarUrl3D(url, ext, done) {
         onError
       );
     } else if (ext === "obj" && THREE.OBJLoader) {
-      // Si quieres OBJ, agrega el script de OBJLoader en tu index.html
       const loader = new THREE.OBJLoader();
       loader.load(
         url,
@@ -543,11 +552,11 @@ function cargarUrl3D(url, ext, done) {
         onError
       );
     } else if (ext === "stl" && THREE.STLLoader) {
-      // Si quieres STL, agrega el script de STLLoader en tu index.html
       const loader = new THREE.STLLoader();
       loader.load(
         url,
         (geometry) => {
+          geometry.computeVertexNormals?.();
           const material = new THREE.MeshStandardMaterial({
             color: 0x888888,
             metalness: 0.1,
@@ -563,7 +572,7 @@ function cargarUrl3D(url, ext, done) {
         onError
       );
     } else {
-      alert("Formato no compatible o loader no disponible. Usa .glb/.gltf o agrega los loaders de OBJ/STL en el HTML.");
+      alert("Formato no compatible o loader no disponible. Usa .glb/.gltf/.obj/.stl");
       setModelStatus("Formato no soportado.");
       done?.();
     }
@@ -608,4 +617,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Inicia visor 3D
   init3D();
+
+  // Mensaje extra si WebGL no está disponible
+  if (!window.WebGLRenderingContext) {
+    setModelStatus("Tu navegador no soporta WebGL.");
+  }
 });
