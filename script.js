@@ -304,7 +304,6 @@ async function pagar() {
       return;
     }
 
-    // Si luego tienes un carrito real, rellena 'items' desde tu estado.
     const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
 
     const res = await fetch(`${window.location.origin}/crear-pago`, {
@@ -320,7 +319,6 @@ async function pagar() {
 
     const data = await res.json();
     if (data?.url) {
-      // Redirige a Stripe inmediatamente
       window.location.href = data.url;
     } else {
       alert("No se pudo iniciar el pago (sin URL de Stripe)");
@@ -458,10 +456,10 @@ function fitModel(object3D) {
   box.getSize(size);
   box.getCenter(center);
 
-  // Re-centra el modelo al origen
-  object3D.position.x += (object3D.position.x - center.x);
-  object3D.position.y += (object3D.position.y - center.y);
-  object3D.position.z += (object3D.position.z - center.z);
+  // Re-centra el modelo al origen (trasladar -center)
+  object3D.position.x -= center.x;
+  object3D.position.y -= center.y;
+  object3D.position.z -= center.z;
 
   // Calcula distancia para encuadre
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
@@ -485,9 +483,9 @@ function cargarModelo3D(){
   const file = fileInput?.files?.[0];
   if (!file) { alert('Selecciona un modelo 3D (.gltf, .glb).'); return; }
   const ext = (file.name||'').split('.').pop().toLowerCase();
-  // 1) Preferir THREE + loaders locales (repo /three)
+  // 1) Preferir THREE + loaders locales
   if (window.THREE && (THREE.GLTFLoader || THREE.OBJLoader || THREE.STLLoader)) {
-    cargarArchivo3D(file); // usa tu pipeline existente con THREE.*
+    cargarArchivo3D(file);
     return;
   }
   // 2) Fallback: <model-viewer>
@@ -537,7 +535,6 @@ function cargarUrl3D(url, ext, done) {
         onError
       );
     } else if (ext === "obj" && THREE.OBJLoader) {
-      // Si quieres OBJ, agrega el script de OBJLoader en tu index.html
       const loader = new THREE.OBJLoader();
       loader.load(
         url,
@@ -552,7 +549,6 @@ function cargarUrl3D(url, ext, done) {
         onError
       );
     } else if (ext === "stl" && THREE.STLLoader) {
-      // Si quieres STL, agrega el script de STLLoader en tu index.html
       const loader = new THREE.STLLoader();
       loader.load(
         url,
@@ -594,6 +590,64 @@ function toggleFondo3D() {
 }
 
 //////////////////////
+// Fallback <model-viewer>
+//////////////////////
+function hasModelViewer(){
+  return !!(window.customElements && window.customElements.get && window.customElements.get('model-viewer'));
+}
+function ensureModelViewer(){
+  let mv = document.getElementById('mv');
+  if (!mv) {
+    const host = document.getElementById('viewer3d');
+    if (!host) return null;
+    mv = document.createElement('model-viewer');
+    mv.id = 'mv';
+    mv.setAttribute('camera-controls','');
+    mv.setAttribute('auto-rotate','');
+    mv.setAttribute('shadow-intensity','1');
+    mv.setAttribute('exposure','1.0');
+    mv.style.width = '100%';
+    mv.style.height = '100%';
+    mv.style.display = 'block';
+    mv.style.borderRadius = '10px';
+    host.innerHTML = '';
+    host.appendChild(mv);
+  }
+  return mv;
+}
+function mvSetStatus(msg){ try { setModelStatus(msg); } catch(_){} }
+function cargarArchivo3D_conModelViewer(file){
+  const mv = ensureModelViewer();
+  if (!mv) { alert('No se pudo crear <model-viewer>'); return; }
+  try{
+    const url = URL.createObjectURL(file);
+    mvSetStatus('Cargando…');
+    const onLoad = ()=>{ URL.revokeObjectURL(url); mv.removeEventListener('load', onLoad); mvSetStatus('Listo ✔'); };
+    mv.addEventListener('load', onLoad);
+    mv.src = url;
+  }catch(e){ console.error(e); mvSetStatus('Error cargando modelo'); }
+}
+
+//////////////////////
+// Espera a que ESM de THREE esté listo
+//////////////////////
+function waitForThreeThenInit(maxMs=3000){
+  const start = Date.now();
+  const tick = ()=>{
+    if (window.THREE && (THREE.GLTFLoader || THREE.OBJLoader || THREE.STLLoader)) {
+      init3D();
+      return;
+    }
+    if (Date.now() - start > maxMs) {
+      console.warn('[3D] THREE no está listo aún; el visor se iniciará al cargar un modelo o tras refrescar.');
+      return;
+    }
+    setTimeout(tick, 100);
+  };
+  tick();
+}
+
+//////////////////////
 // INIT
 //////////////////////
 document.addEventListener("DOMContentLoaded", () => {
@@ -615,6 +669,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Carga inicial de videos
   loadVideos();
 
-  // Inicia visor 3D
-  init3D();
+  // Inicia visor 3D (espera a que el adaptador ESM cargue THREE)
+  waitForThreeThenInit();
 });

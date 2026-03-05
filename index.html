@@ -121,17 +121,15 @@
     </div>
   </div>
 
-  <!-- ===== Adaptador ESM (three r148+ usa jsm). Importa desde /vendor/three.js/* ===== -->
+  <!-- ===== Adaptador ESM (three r148+ usa jsm). Importa desde /vendor/three/* ===== -->
   <script type="module">
     try {
-      // Importa ESM desde la copia local dentro de /vendor/three.js/
-      const THREE_NS = await import('/vendor/three.js/build/three.module.js');
-      const { OrbitControls } = await import('/vendor/three.js/examples/jsm/controls/OrbitControls.js');
-      const { GLTFLoader }   = await import('/vendor/three.js/examples/jsm/loaders/GLTFLoader.js');
-      const { OBJLoader }    = await import('/vendor/three.js/examples/jsm/loaders/OBJLoader.js');
-      const { STLLoader }    = await import('/vendor/three.js/examples/jsm/loaders/STLLoader.js');
+      const THREE_NS = await import('/vendor/three/build/three.module.js');
+      const { OrbitControls } = await import('/vendor/three/examples/jsm/controls/OrbitControls.js');
+      const { GLTFLoader }   = await import('/vendor/three/examples/jsm/loaders/GLTFLoader.js');
+      const { OBJLoader }    = await import('/vendor/three/examples/jsm/loaders/OBJLoader.js');
+      const { STLLoader }    = await import('/vendor/three/examples/jsm/loaders/STLLoader.js');
 
-      // Exponer como API global para tu script.js legacy
       window.THREE = THREE_NS;
       window.THREE.OrbitControls = OrbitControls;
       window.THREE.GLTFLoader    = GLTFLoader;
@@ -140,7 +138,7 @@
 
       console.log('[3D] Adaptador ESM listo:', !!window.THREE, 'GLTFLoader:', !!window.THREE.GLTFLoader);
     } catch (e) {
-      console.error('[3D] Error cargando módulos de /vendor/three.js/', e);
+      console.error('[3D] Error cargando módulos de /vendor/three/', e);
     }
   </script>
 
