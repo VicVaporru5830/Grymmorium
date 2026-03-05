@@ -4,7 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const axios = require("axios");
 
-// === STREAMING APP ===
+// Streaming (Cloudflare R2)
 const fs = require("fs");
 const os = require("os");
 const multer = require("multer");
@@ -18,124 +18,200 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
 const mime = require("mime-types");
 
-// === PAGOS (Stripe Checkout) ===
+// Pagos Stripe
 const Stripe = require("stripe");
 const stripe = process.env.STRIPE_SECRET_KEY
   ? Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-const app = express();
+// Correo
+const { sendReceiptEmail } = require("./mailer");
 
-////////////////////////////////////////////////////
-// MIDDLEWARES
-////////////////////////////////////////////////////
-app.use(cors());
-app.use(express.json());
+const app = express();
+app.set("trust proxy", 1);
+
+/* ------------------------- UTIL ------------------------- */
+function getBaseUrl(req) {
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http").split(",")[0].trim();
+  const host = (req.headers["x-forwarded-host"] || req.get("host") || "").split(",")[0].trim();
+  return `${proto}://${host}`;
+}
+
+/* ------------------------- LOG VARS ------------------------- */
+console.log("===== VARIABLES DE ENTORNO =====");
+[
+  "HF_API_KEY",
+  "YOUTUBE_API_KEY",
+  "FB_PAGE_ID",
+  "FB_ACCESS_TOKEN",
+  "S3_BUCKET",
+  "S3_REGION",
+  "S3_ENDPOINT",
+  "S3_FORCE_PATH_STYLE",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "BASE_URL",
+  "SENDGRID_API_KEY",
+  "MAIL_FROM",
+  "SELLER_EMAIL"
+].forEach(v => console.log(v, process.env[v] ? "✅" : "❌"));
+console.log("=======================================================");
+
+/* ------------------------- MIDDLEWARES ------------------------- */
+app.use(
+  cors({
+    origin: true,
+    methods: ["GET", "POST", "HEAD", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Stripe-Signature"],
+  })
+);
+
 app.use(express.static(path.join(__dirname)));
 
-////////////////////////////////////////////////////
-// LOG DE VARIABLES
-////////////////////////////////////////////////////
-console.log("===== VARIABLES DE ENTORNO =====");
-console.log("HF:", process.env.HF_API_KEY ? "✅ Cargada" : "❌ No cargada");
-console.log("YOUTUBE:", process.env.YOUTUBE_API_KEY ? "✅ Cargada" : "❌ No cargada");
-console.log("FB_PAGE_ID:", process.env.FB_PAGE_ID ? "✅ Cargada" : "❌ No cargada");
-console.log("FB_ACCESS_TOKEN:", process.env.FB_ACCESS_TOKEN ? "✅ Cargada" : "❌ No cargada");
-console.log("S3_BUCKET:", process.env.S3_BUCKET ? "✅ Cargada" : "❌ No cargada");
-console.log("S3_REGION:", process.env.S3_REGION || "❌ Vacía");
-console.log("S3_ENDPOINT:", process.env.S3_ENDPOINT ? "✅ Cargada" : "❌ No cargada");
-console.log("S3_FORCE_PATH_STYLE:", process.env.S3_FORCE_PATH_STYLE || "❌ Vacía");
-console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY ? "✅ Cargada" : "❌ No cargada");
-console.log("BASE_URL:", process.env.BASE_URL || "❌ Vacía");
-console.log("=================================");
+app.use((req, _res, next) => {
+  console.log(`➡️  ${req.method} ${req.url}`);
+  next();
+});
 
-////////////////////////////////////////////////////
-// RUTA PRINCIPAL
-////////////////////////////////////////////////////
+/* ----------------------- STRIPE WEBHOOK ----------------------- */
+app.post(
+  "/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      if (!stripe) return res.status(500).send("Stripe no configurado");
+
+      const sig = req.headers["stripe-signature"];
+      let event;
+
+      try {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } catch (err) {
+        console.error("❌ Firma inválida:", err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      /* --- CUANDO SE COMPLETA EL PAGO --- */
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+
+        // Obtener productos
+        let lineItems = { data: [] };
+        try {
+          lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+        } catch (err) {
+          console.error("⚠️ Error listando line items:", err.message);
+        }
+
+        // Envío de ticket
+        try {
+          await sendReceiptEmail({
+            session,
+            lineItems: lineItems.data,
+          });
+
+          console.log("📧 Ticket enviado a:", session.customer_details?.email);
+        } catch (mailErr) {
+          console.error("❌ Error enviando email:", mailErr.message);
+        }
+      }
+
+      return res.json({ received: true });
+    } catch (e) {
+      console.error("🔥 Error Webhook:", e.message);
+      return res.status(200).end();
+    }
+  }
+);
+
+// Después del webhook:
+app.use(express.json());
+
+/* ------------------------- RUTAS ------------------------- */
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    base_url: getBaseUrl(req),
+    stripe: !!stripe,
+  });
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-////////////////////////////////////////////////////
-// CHAT IA (HUGGING FACE ROUTER FUNCIONAL + LÍMITE DINOSAURIOS)
-////////////////////////////////////////////////////
+/* ------------------------- IA ------------------------- */
 app.post("/chat", async (req, res) => {
   try {
-    if (!process.env.HF_API_KEY) {
-      return res.status(500).json({ error: "HF_API_KEY no configurada en el servidor" });
-    }
+    if (!process.env.HF_API_KEY)
+      return res.status(500).json({ error: "Falta HF_API_KEY" });
 
     const { pregunta } = req.body;
-    if (!pregunta) return res.status(400).json({ error: "La pregunta es obligatoria" });
+    if (!pregunta)
+      return res.status(400).json({ error: "Falta pregunta" });
 
     const response = await axios.post(
       "https://router.huggingface.co/v1/chat/completions",
       {
         model: "mistralai/Mistral-7B-Instruct-v0.2",
         messages: [
-          { role: "system", content: "Eres un experto en dinosaurios. Responde claro y profesional." },
-          { role: "user", content: `Pregunta: ${pregunta}` },
+          { role: "system", content: "Eres experto en dinosaurios." },
+          { role: "user", content: pregunta },
         ],
         max_tokens: 250,
-        temperature: 0.7,
-        stream: false,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.HF_API_KEY}`,
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
-        timeout: 60000,
       }
     );
 
-    const texto = response.data?.choices?.[0]?.message?.content?.trim() || "Sin respuesta del modelo";
-    res.json({ respuesta: texto });
-  } catch (error) {
-    console.error("🔥 ERROR HUGGING FACE:", error.response?.data || error.message);
-    res.status(500).json({ error: error.response?.data?.error || error.message });
+    const txt = response.data?.choices?.[0]?.message?.content?.trim();
+    res.json({ respuesta: txt || "Sin respuesta" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-////////////////////////////////////////////////////
-// YOUTUBE API
-////////////////////////////////////////////////////
-app.get("/youtube", async (req, res) => {
+/* ------------------------- YOUTUBE ------------------------- */
+app.get("/youtube", async (_req, res) => {
   try {
-    if (!process.env.YOUTUBE_API_KEY) {
-      return res.status(500).json({ error: "YOUTUBE_API_KEY no configurada" });
-    }
+    if (!process.env.YOUTUBE_API_KEY)
+      return res.status(500).json({ error: "Falta YOUTUBE_API_KEY" });
 
-    const response = await axios.get("https://www.googleapis.com/youtube/v3/search", {
-      params: {
-        part: "snippet",
-        q: "Animales prehistóricos documentales",
-        type: "video",
-        maxResults: 6,
-        key: process.env.YOUTUBE_API_KEY,
-      },
-    });
+    const r = await axios.get(
+      "https://www.googleapis.com/youtube/v3/search",
+      {
+        params: {
+          part: "snippet",
+          q: "Animales prehistóricos documentales",
+          type: "video",
+          maxResults: 6,
+          key: process.env.YOUTUBE_API_KEY,
+        },
+      }
+    );
 
-    res.json(response.data);
-  } catch (error) {
-    console.error("🔥 ERROR YOUTUBE:", error.response?.data || error.message);
-    res.status(500).json({ error: error.response?.data?.error?.message || error.message });
+    res.json(r.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-////////////////////////////////////////////////////
-// FACEBOOK GRAPH API
-////////////////////////////////////////////////////
-app.get("/facebook", async (req, res) => {
+/* ------------------------- FACEBOOK ------------------------- */
+app.get("/facebook", async (_req, res) => {
   try {
-    if (!process.env.FB_PAGE_ID || !process.env.FB_ACCESS_TOKEN) {
-      return res.status(500).json({ error: "Credenciales de Facebook no configuradas" });
-    }
+    if (!process.env.FB_PAGE_ID || !process.env.FB_ACCESS_TOKEN)
+      return res.status(500).json({ error: "Faltan credenciales FB" });
 
-    // ⚠️ Si FB_PAGE_ID es de un grupo, /posts no funciona con la Graph API actual.
-    const response = await axios.get(
-      `https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/posts`,
+    const r = await axios.get(
+      `https://graph.facebook.com/${process.env.FB_PAGE_ID}/posts`,
       {
         params: {
           fields: "message,permalink_url,created_time",
@@ -144,156 +220,149 @@ app.get("/facebook", async (req, res) => {
       }
     );
 
-    res.json(response.data);
-  } catch (error) {
-    console.error("🔥 ERROR FACEBOOK:", error.response?.data || error.message);
-    res.status(500).json({ error: error.response?.data?.error?.message || error.message });
+    res.json(r.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-////////////////////////////////////////////////////
-// === STREAMING APP === S3 CLIENT (Cloudflare R2)
-////////////////////////////////////////////////////
+/* ============================================================
+        STREAMING — CLOUDFLARE R2 (UPLOAD + LISTADO)
+============================================================ */
 const s3 = new S3Client({
   region: process.env.S3_REGION || "auto",
-  endpoint: process.env.S3_ENDPOINT || undefined,
-  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true" || !!process.env.S3_ENDPOINT, // R2/B2 requieren path-style
+  endpoint: process.env.S3_ENDPOINT,
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
   },
 });
 
-// Multer → disco temporal (no RAM), + filtro MIME
 const allowedMimes = ["video/mp4", "video/webm", "video/ogg"];
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, os.tmpdir()),
   filename: (req, file, cb) => {
-    const ext =
-      path.extname(file.originalname).toLowerCase() ||
-      `.${mime.extension(file.mimetype) || "mp4"}`;
+    const ext = path.extname(file.originalname).toLowerCase() || ".mp4";
     cb(null, `${uuidv4()}${ext}`);
   },
 });
+
 const upload = multer({
   storage,
-  limits: { fileSize: 1024 * 1024 * 500 }, // 500MB
+  limits: { fileSize: 1024 * 1024 * 500 },
   fileFilter: (req, file, cb) => {
     if (!allowedMimes.includes(file.mimetype)) {
-      return cb(new Error("Solo se permiten videos MP4/WEBM/OGG."));
+      return cb(new Error("Formato inválido"));
     }
     cb(null, true);
   },
 });
 
-////////////////////////////////////////////////////
-// SUBIR VIDEO (stream a R2)
-////////////////////////////////////////////////////
 app.post("/upload", upload.single("video"), async (req, res) => {
-  const tempPath = req.file?.path;
+  const temp = req.file?.path;
   try {
-    if (!process.env.S3_BUCKET) return res.status(500).json({ error: "S3_BUCKET no configurado" });
-    if (!req.file) return res.status(400).json({ error: "No se recibió archivo 'video'" });
+    if (!process.env.S3_BUCKET)
+      return res.status(500).json({ error: "Falta S3_BUCKET" });
 
-    const contentType = req.file.mimetype;
+    if (!req.file)
+      return res.status(400).json({ error: "No file" });
+
     const key = `videos/${req.file.filename}`;
 
-    const put = new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET,
-      Key: key,
-      Body: fs.createReadStream(tempPath),
-      ContentType: contentType,
-      // ⚠️ R2 no usa ACLs; se maneja por credenciales/políticas
-    });
-
-    const result = await s3.send(put);
-    fs.unlink(tempPath, () => {});
-
-    res.status(201).json({ ok: true, key, eTag: result.ETag || null });
-  } catch (err) {
-    if (tempPath) fs.unlink(tempPath, () => {});
-    console.error("🔥 ERROR UPLOAD:", err?.name, err?.message, err?.$metadata || "");
-    res.status(500).json({ error: err?.message || "Error subiendo el video" });
-  }
-});
-
-////////////////////////////////////////////////////
-// LISTAR VIDEOS + URLS prefirmadas (1 hora)
-////////////////////////////////////////////////////
-app.get("/videos", async (req, res) => {
-  try {
-    if (!process.env.S3_BUCKET) return res.status(500).json({ error: "S3_BUCKET no configurado" });
-
-    const list = new ListObjectsV2Command({
-      Bucket: process.env.S3_BUCKET,
-      Prefix: "videos/",
-      MaxKeys: 100,
-    });
-    const out = await s3.send(list);
-    const contents = out.Contents || [];
-
-    // Ordena más recientes primero (opcional, mejora UX del "featured")
-    contents.sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified));
-
-    const results = await Promise.all(
-      contents
-        .filter((obj) => obj.Key && !obj.Key.endsWith("/"))
-        .map(async (obj) => {
-          const get = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: obj.Key });
-          const url = await getSignedUrl(s3, get, { expiresIn: 3600 }); // 1h
-          return {
-            key: obj.Key,
-            size: obj.Size,
-            lastModified: obj.LastModified,
-            url,
-          };
-        })
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET,
+        Key: key,
+        Body: fs.createReadStream(temp),
+        ContentType: req.file.mimetype,
+      })
     );
 
-    res.json({ videos: results });
+    fs.unlink(temp, () => {});
+    res.json({ ok: true, key });
   } catch (err) {
-    console.error("🔥 ERROR VIDEOS:", err?.name, err?.message, err?.$metadata || "");
-    res.status(500).json({ error: err?.message || "Error listando videos" });
+    fs.unlink(temp, () => {});
+    res.status(500).json({ error: err.message });
   }
 });
 
-////////////////////////////////////////////////////
-// PAGOS — Stripe Checkout (la opción más rápida)
-////////////////////////////////////////////////////
+app.get("/videos", async (_req, res) => {
+  try {
+    if (!process.env.S3_BUCKET)
+      return res.status(500).json({ error: "Falta S3_BUCKET" });
+
+    const list = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.S3_BUCKET,
+        Prefix: "videos/",
+      })
+    );
+
+    const items = list.Contents || [];
+    items.sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified));
+
+    const result = await Promise.all(
+      items
+        .filter((obj) => obj.Key && !obj.Key.endsWith("/"))
+        .map(async (obj) => ({
+          key: obj.Key,
+          size: obj.Size,
+          lastModified: obj.LastModified,
+          url: await getSignedUrl(
+            s3,
+            new GetObjectCommand({
+              Bucket: process.env.S3_BUCKET,
+              Key: obj.Key,
+            }),
+            { expiresIn: 3600 }
+          ),
+        }))
+    );
+
+    res.json({ videos: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============================================================
+                        PAGOS STRIPE
+============================================================ */
 app.post("/crear-pago", async (req, res) => {
   try {
-    if (!stripe || !process.env.BASE_URL) {
-      return res.status(500).json({ error: "Stripe no configurado (STRIPE_SECRET_KEY/BASE_URL)" });
-    }
+    if (!stripe)
+      return res.status(500).json({ error: "Stripe no configurado" });
 
-    // ⚙️ Ajusta el monto, concepto y moneda a lo que quieras cobrar
+    const { buyerEmail } = req.body;
+    const baseUrl = process.env.BASE_URL?.trim() || getBaseUrl(req);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      customer_email: buyerEmail, // ← CORREO AUTOMÁTICO A STRIPE
       line_items: [
         {
           price_data: {
             currency: "mxn",
             product_data: { name: "Donación ARK" },
-            unit_amount: 5000, // 50.00 MXN (centavos)
+            unit_amount: 1200,
           },
           quantity: 1,
         },
       ],
-      success_url: `${process.env.BASE_URL}/?pago=ok`,
-      cancel_url: `${process.env.BASE_URL}/?pago=cancelado`,
+      success_url: `${baseUrl}/?pago=ok`,
+      cancel_url: `${baseUrl}/?pago=cancelado`,
     });
 
-    return res.json({ url: session.url });
+    res.json({ url: session.url });
   } catch (err) {
-    console.error("Error Stripe:", err.message);
-    return res.status(500).json({ error: "No se pudo crear el pago" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-////////////////////////////////////////////////////
-// INICIAR SERVIDOR
-////////////////////////////////////////////////////
+/* ------------------------- SERVIDOR ------------------------- */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
 });
