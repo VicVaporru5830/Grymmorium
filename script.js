@@ -90,7 +90,11 @@ async function cargarVideosYouTube() {
       if (item.id.kind === "youtube#video") {
         contenedor.innerHTML += `
           <div class="video">
-            https://www.youtube.com/embed/${item.id.videoId}
+            <iframe width="300" height="170"
+              src="https://www.youtube.com/embed/${item.id.videoId}"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
             </iframe>
             <p>${item.snippet.title}</p>
           </div>
@@ -127,7 +131,7 @@ async function cargarPostsFacebook() {
       contenedor.innerHTML += `
         <div class="fb-post">
           <p>${post.message || "[Sin mensaje]"}</p>
-          ${post.permalink_url}
+          <a href="${post.permalink_url}" target="_blank" rel="noopener noreferrer">
             Ver en Facebook
           </a>
         </div>
@@ -209,7 +213,7 @@ async function loadVideos(keepKey) {
 
       card.innerHTML = `
         <div class="video-wrap">
-          ${v.url}</video>
+          <video class="hover-video" muted playsinline preload="metadata" src="${v.url}"></video>
 
           <div class="play-badge" aria-hidden="true">
             <svg viewBox="0 0 100 100" fill="currentColor">
@@ -373,9 +377,6 @@ function init3D() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
-  // Colores correctos (sRGB)
-  if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
-
   threeContainer.innerHTML = ""; // limpia si había algo
   threeContainer.appendChild(renderer.domElement);
 
@@ -457,14 +458,10 @@ function fitModel(object3D) {
   box.getSize(size);
   box.getCenter(center);
 
-  // ✅ Re-centra el modelo al origen (restar el centro real)
-  if (object3D.position && object3D.position.sub) {
-    object3D.position.sub(center);
-  } else {
-    object3D.position.x -= center.x;
-    object3D.position.y -= center.y;
-    object3D.position.z -= center.z;
-  }
+  // Re-centra el modelo al origen
+  object3D.position.x += (object3D.position.x - center.x);
+  object3D.position.y += (object3D.position.y - center.y);
+  object3D.position.z += (object3D.position.z - center.z);
 
   // Calcula distancia para encuadre
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
@@ -512,21 +509,12 @@ function cargarUrl3D(url, ext, done) {
     };
     const onError = (err) => {
       console.error("❌ Error cargando modelo:", err);
-      setModelStatus((err && err.message) ? err.message : "Error cargando modelo.");
+      setModelStatus("Error cargando modelo.");
       done?.();
     };
 
     if ((ext === "gltf" || ext === "glb") && THREE.GLTFLoader) {
       const loader = new THREE.GLTFLoader();
-
-      // ✅ DRACO para glb/gltf comprimidos
-      if (THREE.DRACOLoader) {
-        const draco = new THREE.DRACOLoader();
-        // Ruta a los decoders Draco (misma versión que three)
-        draco.setDecoderPath("https://unpkg.com/three@0.160.0/examples/js/libs/draco/");
-        loader.setDRACOLoader(draco);
-      }
-
       loader.load(
         url,
         (gltf) => {
@@ -560,7 +548,6 @@ function cargarUrl3D(url, ext, done) {
       loader.load(
         url,
         (geometry) => {
-          geometry.computeVertexNormals?.();
           const material = new THREE.MeshStandardMaterial({
             color: 0x888888,
             metalness: 0.1,
