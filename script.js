@@ -546,3 +546,34 @@ scene.background=new THREE.Color(0x111111);
 }
 
 }
+
+//////////////////////
+// INIT
+//////////////////////
+document.addEventListener("DOMContentLoaded", () => {
+  // Upload/lista
+  document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
+  document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
+
+  // Atajos player: barra espaciadora play/pause
+  const mainVideo = document.getElementById("main-video");
+  document.addEventListener("keydown", (e) => {
+    if (!mainVideo) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (mainVideo.paused) mainVideo.play().catch(() => {});
+      else mainVideo.pause();
+    }
+  });
+
+  // Carga inicial de videos
+  loadVideos();
+
+  // Inicia visor 3D
+  init3D();
+
+  // Mensaje extra si WebGL no está disponible
+  if (!window.WebGLRenderingContext) {
+    setModelStatus("Tu navegador no soporta WebGL.");
+  }
+});
