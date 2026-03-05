@@ -330,321 +330,219 @@ async function pagar() {
 }
 
 //////////////////////
-// VISOR 3D (Three.js)
+// VISOR 3D
 //////////////////////
-let scene, camera, renderer, model, threeContainer, controls;
-let lastBgDark = true;
 
-/** Overlay de estado en el visor */
-function setModelStatus(msg) {
-  const container = document.getElementById("viewer3d");
-  if (!container) return;
-  let box = document.getElementById("model-status");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "model-status";
-    box.style.position = "absolute";
-    box.style.left = "12px";
-    box.style.bottom = "12px";
-    box.style.background = "rgba(0,0,0,.6)";
-    box.style.color = "#fff";
-    box.style.padding = "6px 10px";
-    box.style.borderRadius = "8px";
-    box.style.fontSize = "12px";
-    container.style.position = "relative";
-    container.appendChild(box);
-  }
-  box.textContent = msg || "";
+let scene;
+let camera;
+let renderer;
+let model;
+let controls;
+
+function setModelStatus(msg){
+const box=document.getElementById("model-status");
+if(box) box.textContent=msg;
 }
 
-function init3D() {
-  threeContainer = document.getElementById("viewer3d");
-  if (!threeContainer || !window.THREE) {
-    console.warn("Three.js no está cargado.");
-    return;
-  }
+function init3D(){
 
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+const container=document.getElementById("viewer3d");
 
-  camera = new THREE.PerspectiveCamera(
-    60,
-    threeContainer.clientWidth / threeContainer.clientHeight,
-    0.1,
-    2000
-  );
-  camera.position.set(2, 2, 4);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
-  renderer.outputColorSpace = THREE.SRGBColorSpace; // colores correctos
-
-  threeContainer.innerHTML = ""; // limpia si había algo
-  threeContainer.appendChild(renderer.domElement);
-
-  // Luces
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
-  hemi.position.set(0, 1, 0);
-  scene.add(hemi);
-
-  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-  dir.position.set(5, 10, 7);
-  scene.add(dir);
-
-  // Helpers (para que no se vea vacío sin modelo)
-  const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-  scene.add(grid);
-  const axes = new THREE.AxesHelper(1.5);
-  scene.add(axes);
-
-  // Controles de órbita
-  if (THREE.OrbitControls) {
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.target.set(0, 0, 0);
-  }
-
-  // Drag & Drop
-  threeContainer.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    setModelStatus("Suelta el archivo para cargar…");
-  });
-  threeContainer.addEventListener("dragleave", () => {
-    setModelStatus("Arrastra aquí un .glb/.gltf/.obj/.stl o usa el botón.");
-  });
-  threeContainer.addEventListener("drop", (e) => {
-    e.preventDefault();
-    if (!e.dataTransfer.files?.length) return;
-    const file = e.dataTransfer.files[0];
-    cargarArchivo3D(file);
-  });
-
-  animate3D();
-
-  // Resize (observa cambios del contenedor)
-  window.addEventListener("resize", onResize3D);
-  if (window.ResizeObserver) {
-    const ro = new ResizeObserver(onResize3D);
-    ro.observe(threeContainer);
-  }
-
-  setModelStatus("Arrastra aquí un .glb/.gltf/.obj/.stl o usa “Cargar modelo 3D”.");
+if(!container || !window.THREE){
+console.warn("Three.js no cargado");
+return;
 }
 
-function onResize3D() {
-  if (!renderer || !camera || !threeContainer) return;
-  const w = threeContainer.clientWidth;
-  const h = threeContainer.clientHeight || 1;
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-  renderer.setSize(w, h);
-}
+scene=new THREE.Scene();
 
-function animate3D() {
-  requestAnimationFrame(animate3D);
-  if (controls) controls.update();
-  if (renderer && scene && camera) renderer.render(scene, camera);
-}
+scene.background=new THREE.Color(0x111111);
 
-function clearModel3D() {
-  if (!model) return;
-  scene.remove(model);
-  model.traverse?.((c) => {
-    if (c.geometry) c.geometry.dispose?.();
-    if (c.material) {
-      if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose?.());
-      else c.material.dispose?.();
-    }
-    if (c.texture) c.texture.dispose?.();
-  });
-  model = null;
-}
+camera=new THREE.PerspectiveCamera(
+60,
+container.clientWidth/container.clientHeight,
+0.1,
+2000
+);
 
-function fitModel(object3D) {
-  const box = new THREE.Box3().setFromObject(object3D);
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  box.getSize(size);
-  box.getCenter(center);
+camera.position.set(2,2,4);
 
-  // Re-centra al origen
-  object3D.position.sub(center);
+renderer=new THREE.WebGLRenderer({antialias:true});
 
-  // Calcula distancia para encuadre
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  const fov = camera.fov * (Math.PI / 180);
-  const dist = maxDim / (2 * Math.tan(fov / 2));
-  camera.position.set(0, maxDim * 0.5, dist * 1.4);
-  camera.near = Math.max(0.1, dist / 1000);
-  camera.far = dist * 100;
-  camera.updateProjectionMatrix();
+renderer.setSize(
+container.clientWidth,
+container.clientHeight
+);
 
-  if (controls) {
-    controls.target.set(0, 0, 0);
-    controls.update();
-  } else {
-    camera.lookAt(0, 0, 0);
-  }
-}
+renderer.setPixelRatio(window.devicePixelRatio);
 
-function cargarModelo3D() {
-  const fileInput = document.getElementById("modelInput");
-  const file = fileInput?.files?.[0];
-  if (!file) {
-    alert("Selecciona un modelo 3D (.gltf/.glb/.obj/.stl).");
-    return;
-  }
-  cargarArchivo3D(file);
-}
+container.appendChild(renderer.domElement);
 
-function cargarArchivo3D(file) {
-  const url = URL.createObjectURL(file);
-  const ext = (file.name || "").split(".").pop().toLowerCase();
-  cargarUrl3D(url, ext, () => URL.revokeObjectURL(url));
-}
+const light=new THREE.HemisphereLight(0xffffff,0x444444,1);
+scene.add(light);
 
-function cargarUrl3D(url, ext, done) {
-  try {
-    setModelStatus("Cargando… 0%");
-    clearModel3D();
+const dir=new THREE.DirectionalLight(0xffffff,1);
+dir.position.set(5,10,7);
+scene.add(dir);
 
-    const onProgress = (xhr) => {
-      if (!xhr?.lengthComputable) return;
-      const p = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
-      setModelStatus(`Cargando… ${p}%`);
-    };
-    const onError = (err) => {
-      console.error("❌ Error cargando modelo:", err);
-      const msg = (err && (err.message || err.toString())) || "Error cargando modelo.";
-      setModelStatus(msg);
-      done?.();
-    };
+controls=new THREE.OrbitControls(
+camera,
+renderer.domElement
+);
 
-    // ---- GLB / GLTF ----
-    if ((ext === "gltf" || ext === "glb") && THREE.GLTFLoader) {
-      const loader = new THREE.GLTFLoader();
+controls.enableDamping=true;
 
-      // DRACO (para glb/gltf comprimidos)
-      if (THREE.DRACOLoader) {
-        const draco = new THREE.DRACOLoader();
-        draco.setDecoderPath("https://unpkg.com/three@0.160.0/examples/js/libs/draco/");
-        loader.setDRACOLoader(draco);
-      }
+animate3D();
 
-      // KTX2 (texturas BasisU/ktx2)
-      if (THREE.KTX2Loader) {
-        const ktx2 = new THREE.KTX2Loader();
-        ktx2.setTranscoderPath("https://unpkg.com/three@0.160.0/examples/js/libs/basis/");
-        ktx2.detectSupport(renderer);
-        loader.setKTX2Loader(ktx2);
-      }
+window.addEventListener("resize",()=>{
 
-      loader.load(
-        url,
-        (gltf) => {
-          model = gltf.scene || gltf.scenes?.[0];
-          scene.add(model);
-          fitModel(model);
-          setModelStatus("Listo ✔");
-          done?.();
-        },
-        onProgress,
-        onError
-      );
-      return;
-    }
+camera.aspect=
+container.clientWidth/
+container.clientHeight;
 
-    // ---- OBJ ----
-    if (ext === "obj" && THREE.OBJLoader) {
-      const loader = new THREE.OBJLoader();
-      loader.load(
-        url,
-        (obj) => {
-          model = obj;
-          scene.add(model);
-          fitModel(model);
-          setModelStatus("Listo ✔");
-          done?.();
-        },
-        onProgress,
-        onError
-      );
-      return;
-    }
+camera.updateProjectionMatrix();
 
-    // ---- STL ----
-    if (ext === "stl" && THREE.STLLoader) {
-      const loader = new THREE.STLLoader();
-      loader.load(
-        url,
-        (geometry) => {
-          geometry.computeVertexNormals?.();
-          const material = new THREE.MeshStandardMaterial({
-            color: 0x888888,
-            metalness: 0.1,
-            roughness: 0.8,
-          });
-          model = new THREE.Mesh(geometry, material);
-          scene.add(model);
-          fitModel(model);
-          setModelStatus("Listo ✔");
-          done?.();
-        },
-        onProgress,
-        onError
-      );
-      return;
-    }
+renderer.setSize(
+container.clientWidth,
+container.clientHeight
+);
 
-    alert("Formato no compatible o loader no disponible. Usa .glb/.gltf/.obj/.stl");
-    setModelStatus("Formato no soportado.");
-    done?.();
-  } catch (e) {
-    console.error(e);
-    setModelStatus("Error inesperado cargando modelo.");
-    done?.();
-  }
-}
-
-function resetCamara3D() {
-  if (!model) return;
-  fitModel(model);
-}
-
-function toggleFondo3D() {
-  lastBgDark = !lastBgDark;
-  scene.background = new THREE.Color(lastBgDark ? 0x111111 : 0xf3f3f3);
-}
-
-//////////////////////
-// INIT
-//////////////////////
-document.addEventListener("DOMContentLoaded", () => {
-  // Upload/lista
-  document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
-  document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
-
-  // Atajos player: barra espaciadora play/pause
-  const mainVideo = document.getElementById("main-video");
-  document.addEventListener("keydown", (e) => {
-    if (!mainVideo) return;
-    if (e.code === "Space") {
-      e.preventDefault();
-      if (mainVideo.paused) mainVideo.play().catch(() => {});
-      else mainVideo.pause();
-    }
-  });
-
-  // Carga inicial de videos
-  loadVideos();
-
-  // Inicia visor 3D
-  init3D();
-
-  // Mensaje extra si WebGL no está disponible
-  if (!window.WebGLRenderingContext) {
-    setModelStatus("Tu navegador no soporta WebGL.");
-  }
 });
+
+setModelStatus("Visor listo");
+
+}
+
+function animate3D(){
+
+requestAnimationFrame(animate3D);
+
+if(controls) controls.update();
+
+renderer.render(scene,camera);
+
+}
+
+function cargarModelo3D(){
+
+const fileInput=document.getElementById("modelInput");
+
+const file=fileInput.files[0];
+
+if(!file){
+alert("Selecciona un modelo");
+return;
+}
+
+const url=URL.createObjectURL(file);
+
+const ext=file.name.split(".").pop().toLowerCase();
+
+clearModel();
+
+if(ext==="glb"||ext==="gltf"){
+
+const loader=new THREE.GLTFLoader();
+
+loader.load(url,(gltf)=>{
+
+model=gltf.scene;
+
+scene.add(model);
+
+fitModel(model);
+
+});
+
+}
+
+else if(ext==="obj"){
+
+const loader=new THREE.OBJLoader();
+
+loader.load(url,(obj)=>{
+
+model=obj;
+
+scene.add(model);
+
+fitModel(model);
+
+});
+
+}
+
+else if(ext==="stl"){
+
+const loader=new THREE.STLLoader();
+
+loader.load(url,(geometry)=>{
+
+const material=new THREE.MeshStandardMaterial({
+color:0x888888
+});
+
+model=new THREE.Mesh(geometry,material);
+
+scene.add(model);
+
+fitModel(model);
+
+});
+
+}
+
+else{
+
+alert("Formato no soportado");
+
+}
+
+}
+
+function clearModel(){
+
+if(!model) return;
+
+scene.remove(model);
+
+model=null;
+
+}
+
+function fitModel(object){
+
+const box=new THREE.Box3().setFromObject(object);
+
+const size=new THREE.Vector3();
+
+box.getSize(size);
+
+const maxDim=Math.max(size.x,size.y,size.z);
+
+camera.position.set(0,maxDim,maxDim*2);
+
+controls.target.set(0,0,0);
+
+controls.update();
+
+}
+
+function resetCamara3D(){
+
+if(model) fitModel(model);
+
+}
+
+function toggleFondo3D(){
+
+if(scene.background.getHex()==0x111111){
+
+scene.background=new THREE.Color(0xffffff);
+
+}else{
+
+scene.background=new THREE.Color(0x111111);
+
+}
+
+}
