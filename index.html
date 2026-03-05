@@ -121,28 +121,35 @@
     </div>
   </div>
 
-  <!-- ===== Adaptador ESM (three r148+ usa jsm). Importa desde /vendor/three/* ===== -->
+  <!-- 1) IMPORT MAP: resuelve 'three' y 'three/addons/*' a /vendor/three/* -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three/build/three.module.js",
+      "three/addons/": "/vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- 2) ADAPTADOR: importa una sola instancia y la expone en window.THREE -->
   <script type="module">
     try {
-      // Núcleo ESM
-      const THREE_NS = await import('/vendor/three/build/three.module.js');
+      const THREE_NS = await import('three');
+      const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+      const { GLTFLoader }   = await import('three/addons/loaders/GLTFLoader.js');
+      const { OBJLoader }    = await import('three/addons/loaders/OBJLoader.js');
+      const { STLLoader }    = await import('three/addons/loaders/STLLoader.js');
 
-      // Controles + loaders (ESM)
-      const { OrbitControls } = await import('/vendor/three/examples/jsm/controls/OrbitControls.js');
-      const { GLTFLoader }   = await import('/vendor/three/examples/jsm/loaders/GLTFLoader.js');
-      const { OBJLoader }    = await import('/vendor/three/examples/jsm/loaders/OBJLoader.js');
-      const { STLLoader }    = await import('/vendor/three/examples/jsm/loaders/STLLoader.js');
-
-      // Exponer como API global para tu script.js legacy (que usa THREE.*)
+      // Exponer como API global para tu script.js legacy
       window.THREE = THREE_NS;
       window.THREE.OrbitControls = OrbitControls;
       window.THREE.GLTFLoader    = GLTFLoader;
       window.THREE.OBJLoader     = OBJLoader;
       window.THREE.STLLoader     = STLLoader;
 
-      console.log('[3D] Adaptador ESM listo:', !!window.THREE, 'GLTFLoader:', !!window.THREE.GLTFLoader);
+      console.log('[3D] THREE listo (una sola instancia):', !!window.THREE, 'GLTFLoader:', !!THREE.GLTFLoader);
     } catch (e) {
-      console.error('[3D] Error cargando módulos de /vendor/three/', e);
+      console.error('[3D] Error inicializando THREE con import map:', e);
     }
   </script>
 

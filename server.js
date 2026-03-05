@@ -24,10 +24,9 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-// Correo
+// Correo (opcional)
 let sendReceiptEmail = async () => {};
 try {
-  // mailer opcional (evita crash si no está el archivo)
   ({ sendReceiptEmail } = require("./mailer"));
 } catch (e) {
   console.warn("[WARN] mailer no encontrado, usando función vacía");
@@ -118,7 +117,6 @@ app.post(
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      // Evento de éxito en Checkout
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
 
@@ -130,7 +128,7 @@ app.post(
           console.error("⚠️ Error listando line items:", err.message);
         }
 
-        // Enviar ticket (con PDF si ya integraste el generador)
+        // Enviar ticket (si configuraste mailer)
         try {
           await sendReceiptEmail({
             session,
@@ -148,7 +146,7 @@ app.post(
       return res.json({ received: true });
     } catch (e) {
       console.error("🔥 Error Webhook:", e.message);
-      return res.status(200).end(); // evita reintentos agresivos
+      return res.status(200).end();
     }
   }
 );
@@ -166,7 +164,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "Index.html"));
+  res.sendFile(path.join(__dirname, "Index.html")); // respetar mayúscula
 });
 
 /* ------------------------- IA ------------------------- */
@@ -355,7 +353,7 @@ const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
 
 const uploadModel = multer({
   storage,
-  limits: { fileSize: 1024 * 1024 * 100 }, // 100MB (ajusta a tu gusto)
+  limits: { fileSize: 1024 * 1024 * 100 }, // 100MB
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!allowedModelExt.has(ext)) {
@@ -390,7 +388,7 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
 
     fs.unlink(temp, () => {});
 
-    // Te regreso también una URL prefirmada listita para usar 1 hora
+    // URL prefirmada 1 hora
     const url = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }),
@@ -457,7 +455,7 @@ app.post("/crear-pago", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: buyerEmail, // envía el correo capturado al Checkout
+      customer_email: buyerEmail,
       line_items: [
         {
           price_data: {
@@ -484,7 +482,6 @@ app.post("/debug-send", async (req, res) => {
     const to = (req.body?.to || "").trim();
     if (!to) return res.status(400).json({ error: "Falta 'to' en body" });
 
-    // Simula una sesión y line items
     const fakeSession = {
       id: "debug_session_123",
       amount_total: 1200,
