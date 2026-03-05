@@ -128,11 +128,11 @@
     <script type="module">
       try {
         // Ajusta esta ruta si tu carpeta no se llama exactamente 'three' en la raíz
-        const THREE_NS = await import('/three/build/three.module.js');
-        const { OrbitControls } = await import('/three/examples/jsm/controls/OrbitControls.js');
-        const { GLTFLoader }  = await import('/three/examples/jsm/loaders/GLTFLoader.js');
-        const { OBJLoader }   = await import('/three/examples/jsm/loaders/OBJLoader.js');
-        const { STLLoader }   = await import('/three/examples/jsm/loaders/STLLoader.js');
+        const THREE_NS = await import('/three.js/build/three.module.js');
+        const { OrbitControls } = await import('/three.js/examples/jsm/controls/OrbitControls.js');
+        const { GLTFLoader }  = await import('/three.js/examples/jsm/loaders/GLTFLoader.js');
+        const { OBJLoader }   = await import('/three.js/examples/jsm/loaders/OBJLoader.js');
+        const { STLLoader }   = await import('/three.js/examples/jsm/loaders/STLLoader.js');
         // Exponer como API global para el código existente
         window.THREE = THREE_NS;
         window.THREE.OrbitControls = OrbitControls;
