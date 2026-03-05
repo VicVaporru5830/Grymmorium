@@ -124,12 +124,31 @@
 
   <!-- JS PRINCIPAL -->
   
-    <!-- THREE.js + loaders (necesarios para el visor 3D) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
+    <!-- Adaptador ESM: usa el repo local /three/* y expone window.THREE + loaders -->
+    <script type="module">
+      try {
+        // Ajusta esta ruta si tu carpeta no se llama exactamente 'three' en la raíz
+        const THREE_NS = await import('/three/build/three.module.js');
+        const { OrbitControls } = await import('/three/examples/jsm/controls/OrbitControls.js');
+        const { GLTFLoader }  = await import('/three/examples/jsm/loaders/GLTFLoader.js');
+        const { OBJLoader }   = await import('/three/examples/jsm/loaders/OBJLoader.js');
+        const { STLLoader }   = await import('/three/examples/jsm/loaders/STLLoader.js');
+        // Exponer como API global para el código existente
+        window.THREE = THREE_NS;
+        window.THREE.OrbitControls = OrbitControls;
+        window.THREE.GLTFLoader = GLTFLoader;
+        window.THREE.OBJLoader = OBJLoader;
+        window.THREE.STLLoader = STLLoader;
+        console.log('[3D] Adaptador ESM listo:', !!window.THREE,
+                    'GLTFLoader:', !!window.THREE.GLTFLoader);
+      } catch (e) {
+        console.error('[3D] Error cargando módulos de /three/', e);
+      }
+    </script>
+
+    
+    <!-- <model-viewer> fallback sin loaders -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 
     <script src="script.js"></script>
 

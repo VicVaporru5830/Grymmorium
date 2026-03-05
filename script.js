@@ -480,14 +480,23 @@ function fitModel(object3D) {
   }
 }
 
-function cargarModelo3D() {
-  const fileInput = document.getElementById("modelInput");
+function cargarModelo3D(){
+  const fileInput = document.getElementById('modelInput');
   const file = fileInput?.files?.[0];
-  if (!file) {
-    alert("Selecciona un modelo 3D (.gltf, .glb). Para OBJ/STL debes incluir sus loaders.");
+  if (!file) { alert('Selecciona un modelo 3D (.gltf, .glb).'); return; }
+  const ext = (file.name||'').split('.').pop().toLowerCase();
+  // 1) Preferir THREE + loaders locales (repo /three)
+  if (window.THREE && (THREE.GLTFLoader || THREE.OBJLoader || THREE.STLLoader)) {
+    cargarArchivo3D(file); // usa tu pipeline existente con THREE.*
     return;
   }
-  cargarArchivo3D(file);
+  // 2) Fallback: <model-viewer>
+  const mv = document.getElementById('mv');
+  if (mv && (ext==='glb' || ext==='gltf')){
+    cargarArchivo3D_conModelViewer(file);
+    return;
+  }
+  alert('No hay loader disponible para este formato.');
 }
 
 function cargarArchivo3D(file) {
