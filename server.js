@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+const path = require("path"); // ✅ Ya está aquí. No volver a declararlo más abajo.
 const axios = require("axios");
 
 // Streaming (Cloudflare R2)
@@ -145,7 +145,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html")); // minúsculas
+  res.sendFile(path.join(__dirname, "index.html")); // usa index.html (minúsculas)
 });
 
 /* ------------------------- IA ------------------------- */
@@ -351,7 +351,8 @@ app.get("/videos", async (_req, res) => {
 });
 
 /* ============================ MODELOS 3D ============================ */
-const path = require("path");
+// ❌ OJO: NO volver a poner `const path = require("path");` aquí.
+// Ya lo importamos al principio. Usamos el mismo `path`.
 const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
 
 const uploadModel = multer({
