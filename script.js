@@ -1,11 +1,13 @@
-//////////////////////
-// BASE DEL API
-//////////////////////
+"use strict";
+
+/***********************
+ * BASE DEL API
+ ***********************/
 const API_BASE = window.location.origin; // mismo host/puerto del server
 
-//////////////////////
-// 2FA SIMPLE
-//////////////////////
+/***********************
+ * 2FA SIMPLE
+ ***********************/
 const codigoCorrecto = "123456";
 
 function verificarCodigo() {
@@ -21,9 +23,9 @@ function verificarCodigo() {
   }
 }
 
-//////////////////////
-// GOOGLE MAPS
-//////////////////////
+/***********************
+ * GOOGLE MAPS
+ ***********************/
 function initMap() {
   try {
     const ubicacion = { lat: 19.4326, lng: -99.1332 };
@@ -41,9 +43,9 @@ function initMap() {
 }
 window.initMap = initMap;
 
-//////////////////////
-// IA DINOSAURIOS
-//////////////////////
+/***********************
+ * IA DINOSAURIOS
+ ***********************/
 async function preguntarIA() {
   const pregunta = document.getElementById("pregunta").value;
   const respuestaBox = document.getElementById("respuesta");
@@ -57,17 +59,19 @@ async function preguntarIA() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pregunta }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error desconocido");
-    respuestaBox.innerText = data.respuesta;
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    respuestaBox.innerText = data.respuesta || "Sin respuesta";
   } catch (error) {
     respuestaBox.innerText = "Error IA: " + error.message;
   }
 }
 
-//////////////////////
-// YOUTUBE
-//////////////////////
+/***********************
+ * YOUTUBE
+ ***********************/
 async function cargarVideosYouTube() {
   const contenedor = document.getElementById("youtube-videos");
   const errorBox = document.getElementById("youtube-error");
@@ -87,12 +91,17 @@ async function cargarVideosYouTube() {
     }
 
     data.items.forEach((item) => {
-      if (item.id.kind === "youtube#video") {
+      if (item.id && item.id.kind === "youtube#video") {
+        const vid = item.id.videoId;
+        const title = item.snippet?.title || "Video";
+
         contenedor.innerHTML += `
           <div class="video">
-            https://www.youtube.com/embed/${item.id.videoId}
-            </iframe>
-            <p>${item.snippet.title}</p>
+            https://www.youtube.com/embed/${vid}" 
+              title="${title}"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            <p>${title}</p>
           </div>
         `;
       }
@@ -102,9 +111,15 @@ async function cargarVideosYouTube() {
   }
 }
 
-//////////////////////
-// FACEBOOK
-//////////////////////
+/***********************
+ * FACEBOOK
+ ***********************/
+function escapeHtml(s = "") {
+  return s.replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
 async function cargarPostsFacebook() {
   const contenedor = document.getElementById("facebook-posts");
   const errorBox = document.getElementById("facebook-error");
@@ -124,12 +139,13 @@ async function cargarPostsFacebook() {
     }
 
     data.data.forEach((post) => {
+      const msg = post.message ? escapeHtml(post.message) : "[Sin mensaje]";
+      const link = post.permalink_url || "#";
+
       contenedor.innerHTML += `
         <div class="fb-post">
-          <p>${post.message || "[Sin mensaje]"}</p>
-          ${post.permalink_url}
-            Ver en Facebook
-          </a>
+          <p>${msg}</p>
+          ${link}" target="_blank" rel="noopener noreferrer">Ver en Facebook</a>
         </div>
       `;
     });
@@ -138,9 +154,9 @@ async function cargarPostsFacebook() {
   }
 }
 
-//////////////////////
-// STREAMING (Cloudflare R2) — con “player” principal
-//////////////////////
+/***********************
+ * STREAMING (Cloudflare R2) — con “player” principal
+ ***********************/
 function getFileNameFromKey(key) {
   try { return (key || "").split("/").pop() || key || "archivo"; }
   catch { return key || "archivo"; }
@@ -162,7 +178,8 @@ function setFeatured(videoObj) {
   try { mainVideo.pause(); } catch {}
   mainVideo.src = videoObj?.url || "";
   mainVideo.currentTime = 0;
-
+  // Autoplay cross-browser
+  mainVideo.muted = true;
   mainVideo.play().catch(() => {});
 
   const name = getFileNameFromKey(videoObj?.key || "");
@@ -183,6 +200,8 @@ async function loadVideos(keepKey) {
   try {
     const r = await fetch(`${API_BASE}/videos`);
     const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+
     grid.innerHTML = "";
 
     const videos = data.videos || [];
@@ -209,7 +228,7 @@ async function loadVideos(keepKey) {
 
       card.innerHTML = `
         <div class="video-wrap">
-          ${v.url}</video>
+          <video class="hover-video" src="${v.url}" muted loop playsinline preload="metadata"></video>
 
           <div class="play-badge" aria-hidden="true">
             <svg viewBox="0 0 100 100" fill="currentColor">
@@ -287,9 +306,9 @@ async function handleUpload(e) {
   }
 }
 
-//////////////////////
-// PAGOS (Stripe Checkout)
-//////////////////////
+/***********************
+ * PAGOS (Stripe Checkout)
+ ***********************/
 async function pagar() {
   try {
     const emailInput = document.getElementById("buyerEmail");
@@ -300,10 +319,7 @@ async function pagar() {
       return;
     }
 
-    // Si luego tienes un carrito real, rellena 'items' desde tu estado.
-    const items = [
-      { name: "Donación ARK", qty: 1, price: 12.0 }
-    ];
+    const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
 
     const res = await fetch(`${window.location.origin}/crear-pago`, {
       method: "POST",
@@ -318,7 +334,6 @@ async function pagar() {
 
     const data = await res.json();
     if (data?.url) {
-      // Redirige a Stripe inmediatamente
       window.location.href = data.url;
     } else {
       alert("No se pudo iniciar el pago (sin URL de Stripe)");
@@ -329,14 +344,15 @@ async function pagar() {
   }
 }
 
-//////////////////////
-// VISOR 3D (Three.js)
-//////////////////////
-let scene, camera, renderer, model, threeContainer;
+/***********************
+ * VISOR 3D (Three.js)
+ ***********************/
+let scene, camera, renderer, model, threeContainer, controls;
+let darkBg = true;
 
 function init3D() {
   threeContainer = document.getElementById("viewer3d");
-  if (!threeContainer || !window.THREE) return; // si no existe el div o no cargó three.js, no iniciar
+  if (!threeContainer || !window.THREE) return;
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
@@ -352,7 +368,7 @@ function init3D() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
-  threeContainer.innerHTML = ""; // limpia si había algo
+  threeContainer.innerHTML = "";
   threeContainer.appendChild(renderer.domElement);
 
   // Luces
@@ -363,6 +379,12 @@ function init3D() {
   const dir = new THREE.DirectionalLight(0xffffff, 0.9);
   dir.position.set(5, 10, 7);
   scene.add(dir);
+
+  // Controles de órbita (si están disponibles)
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+  }
 
   animate3D();
 
@@ -382,28 +404,29 @@ function onResize3D() {
 function animate3D() {
   requestAnimationFrame(animate3D);
   if (model) model.rotation.y += 0.005;
+  if (controls) controls.update?.();
   if (renderer && scene && camera) renderer.render(scene, camera);
 }
 
 function fitModel(object3D) {
-  // centra y escala el modelo para que quepa en cámara
   const box = new THREE.Box3().setFromObject(object3D);
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
   box.getSize(size);
   box.getCenter(center);
 
-  // Re-centra el modelo
   object3D.position.x += (object3D.position.x - center.x);
   object3D.position.y += (object3D.position.y - center.y);
   object3D.position.z += (object3D.position.z - center.z);
 
-  // Calcula distancia para encuadre
   const maxDim = Math.max(size.x, size.y, size.z);
   const fov = camera.fov * (Math.PI / 180);
   const dist = maxDim / (2 * Math.tan(fov / 2));
   camera.position.set(0, maxDim * 0.5, dist * 1.4);
   camera.lookAt(0, 0, 0);
+
+  controls?.target?.set(0, 0, 0);
+  controls?.update?.();
 }
 
 function cargarModelo3D() {
@@ -445,7 +468,7 @@ function cargarModelo3D() {
         fitModel(model);
       },
       undefined,
-      (err) => alert("Error cargando GLTF/GLB: " + err.message)
+      (err) => alert("Error cargando GLTF/GLB: " + (err?.message || err))
     );
   } else if (ext === "obj" && THREE.OBJLoader) {
     const loader = new THREE.OBJLoader();
@@ -457,7 +480,7 @@ function cargarModelo3D() {
         fitModel(model);
       },
       undefined,
-      (err) => alert("Error cargando OBJ: " + err.message)
+      (err) => alert("Error cargando OBJ: " + (err?.message || err))
     );
   } else if (ext === "stl" && THREE.STLLoader) {
     const loader = new THREE.STLLoader();
@@ -470,16 +493,29 @@ function cargarModelo3D() {
         fitModel(model);
       },
       undefined,
-      (err) => alert("Error cargando STL: " + err.message)
+      (err) => alert("Error cargando STL: " + (err?.message || err))
     );
   } else {
     alert("Formato no compatible o loader no disponible.");
   }
 }
 
-//////////////////////
-// INIT
-//////////////////////
+function resetCamara3D() {
+  if (!camera) return;
+  camera.position.set(2, 2, 4);
+  camera.lookAt(0, 0, 0);
+  controls?.target?.set(0, 0, 0);
+  controls?.update?.();
+}
+
+function toggleFondo3D() {
+  darkBg = !darkBg;
+  if (scene) scene.background = new THREE.Color(darkBg ? 0x111111 : 0xf0f0f0);
+}
+
+/***********************
+ * INIT
+ ***********************/
 document.addEventListener("DOMContentLoaded", () => {
   // Upload/lista
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
