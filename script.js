@@ -1,15 +1,24 @@
+/* ============================
+   script.js — Proyecto ARK
+   ============================
+   - SIN Three.js (eliminado)
+   - Mapbox GL 3D (modo caminar) con token desde /config/mapbox
+   - Conserva: Google Maps 2D, IA, YouTube, Facebook, Streaming (R2), Stripe, 2FA
+================================ */
+
 //////////////////////
 // BASE DEL API
 //////////////////////
-const API_BASE = window.location.origin; // mismo host/puerto del server
+const API_BASE = window.location.origin;
 
 //////////////////////
 // 2FA SIMPLE
 //////////////////////
 const codigoCorrecto = "123456";
 function verificarCodigo() {
-  const codigo = document.getElementById("codigo").value;
+  const codigo = document.getElementById("codigo")?.value || "";
   const msg = document.getElementById("verificacion-msg");
+  if (!msg) return;
   if (codigo === codigoCorrecto) {
     msg.innerText = "Verificación correcta ✅";
     msg.style.color = "green";
@@ -18,31 +27,33 @@ function verificarCodigo() {
     msg.style.color = "red";
   }
 }
+window.verificarCodigo = verificarCodigo;
 
 //////////////////////
-// GOOGLE MAPS
+// GOOGLE MAPS (2D)
 //////////////////////
 function initMap() {
   try {
     const ubicacion = { lat: 19.4326, lng: -99.1332 };
-    const map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 10,
-      center: ubicacion,
-    });
+    const el = document.getElementById("map");
+    if (!el || !window.google?.maps) return;
+    const map = new google.maps.Map(el, { zoom: 10, center: ubicacion });
     new google.maps.Marker({ position: ubicacion, map });
   } catch (error) {
-    document.getElementById("map-error").innerText =
-      "Error cargando Google Maps: " + error.message;
+    const errEl = document.getElementById("map-error");
+    if (errEl) errEl.innerText = "Error cargando Google Maps: " + error.message;
+    console.error(error);
   }
 }
-window.initMap = initMap;
+window.initMap = initMap; // necesario para callback=?initMap
 
 //////////////////////
 // IA DINOSAURIOS
 //////////////////////
 async function preguntarIA() {
-  const pregunta = document.getElementById("pregunta").value;
+  const pregunta = document.getElementById("pregunta")?.value || "";
   const respuestaBox = document.getElementById("respuesta");
+  if (!respuestaBox) return;
   if (!pregunta) return;
   respuestaBox.innerText = "Cargando...";
   try {
@@ -53,11 +64,12 @@ async function preguntarIA() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-    respuestaBox.innerText = data.respuesta;
+    respuestaBox.innerText = data.respuesta || "Sin respuesta";
   } catch (error) {
     respuestaBox.innerText = "Error IA: " + error.message;
   }
 }
+window.preguntarIA = preguntarIA;
 
 //////////////////////
 // YOUTUBE
@@ -65,6 +77,7 @@ async function preguntarIA() {
 async function cargarVideosYouTube() {
   const contenedor = document.getElementById("youtube-videos");
   const errorBox = document.getElementById("youtube-error");
+  if (!contenedor || !errorBox) return;
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando videos...";
   try {
@@ -77,16 +90,21 @@ async function cargarVideosYouTube() {
       return;
     }
     data.items.forEach((item) => {
-      if (item.id.kind === "youtube#video") {
+      if (item.id && item.id.kind === "youtube#video") {
+        const vid = item.id.videoId;
+        const title = item.snippet?.title || "Video";
         contenedor.innerHTML += `
           <div class="video">
-            <iframe width="300" height="170"
-              src="https://www.youtube.com/embed/${item.id.videoId}"
+            <iframe
+              width="300" height="170"
+              src="https://www.youtube.com/embed/${vid}"
+              title="${title}"
               frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
               allowfullscreen>
             </iframe>
-            <p>${item.snippet.title}</p>
+            <p>${title}</p>
           </div>
         `;
       }
@@ -95,13 +113,18 @@ async function cargarVideosYouTube() {
     errorBox.innerText = "Error YouTube: " + err.message;
   }
 }
+window.cargarVideosYouTube = cargarVideosYouTube;
 
 //////////////////////
 // FACEBOOK
 //////////////////////
+function escapeHtml(s = "") {
+  return s.replace(/[&<>\"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
 async function cargarPostsFacebook() {
   const contenedor = document.getElementById("facebook-posts");
   const errorBox = document.getElementById("facebook-error");
+  if (!contenedor || !errorBox) return;
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando publicaciones...";
   try {
@@ -114,10 +137,12 @@ async function cargarPostsFacebook() {
       return;
     }
     data.data.forEach((post) => {
+      const msg = post.message ? escapeHtml(post.message) : "[Sin mensaje]";
+      const link = post.permalink_url || "#";
       contenedor.innerHTML += `
         <div class="fb-post">
-          <p>${post.message || "[Sin mensaje]"}</p>
-          <a href="${post.permalink_url}" target="_blank" rel="noopener noreferrer">Ver en Facebook</a>
+          <p>${msg}</p>
+          <a href="${link}" target="_blank" rel="noopener noreferrer">Ver en Facebook</a>
         </div>
       `;
     });
@@ -125,9 +150,10 @@ async function cargarPostsFacebook() {
     errorBox.innerText = "Error Facebook: " + err.message;
   }
 }
+window.cargarPostsFacebook = cargarPostsFacebook;
 
 //////////////////////
-// STREAMING (Cloudflare R2) — con “player” principal
+// STREAMING (R2/S3) + PLAYER
 //////////////////////
 function getFileNameFromKey(key) {
   try { return (key || "").split("/").pop() || key || "archivo"; }
@@ -148,12 +174,17 @@ function setFeatured(videoObj) {
   try { mainVideo.pause(); } catch {}
   mainVideo.src = videoObj?.url || "";
   mainVideo.currentTime = 0;
+
+  // Mejor compatibilidad de autoplay (algunas plataformas requieren muted)
+  mainVideo.muted = true;
   mainVideo.play().catch(() => {});
+
   const name = getFileNameFromKey(videoObj?.key || "");
   const size = formatBytes(videoObj?.size);
   const fecha = videoObj?.lastModified ? new Date(videoObj.lastModified).toLocaleString() : "";
-  mainFilename.textContent = name || "Video";
-  mainExtra.textContent = `${size ? `Tamaño: ${size} · ` : ""}${fecha ? `Modificado: ${fecha}` : ""}`;
+  if (mainFilename) mainFilename.textContent = name || "Video";
+  if (mainExtra) mainExtra.textContent = `${size ? `Tamaño: ${size} · ` : ""}${fecha ? `Modificado: ${fecha}` : ""}`;
+
   document.querySelector(".player")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 async function loadVideos(keepKey) {
@@ -163,6 +194,8 @@ async function loadVideos(keepKey) {
   try {
     const r = await fetch(`${API_BASE}/videos`);
     const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+
     grid.innerHTML = "";
     const videos = data.videos || [];
     if (!videos.length) {
@@ -170,12 +203,14 @@ async function loadVideos(keepKey) {
       setFeatured({ url: "", key: "", size: 0, lastModified: null });
       return;
     }
+
     let featured = videos[0];
     if (keepKey) {
       const found = videos.find((v) => v.key === keepKey);
       if (found) featured = found;
     }
     setFeatured(featured);
+
     videos.forEach((v) => {
       const fileName = getFileNameFromKey(v.key);
       const card = document.createElement("div");
@@ -184,7 +219,7 @@ async function loadVideos(keepKey) {
       card.title = v.key;
       card.innerHTML = `
         <div class="video-wrap">
-          <video class="hover-video" muted playsinline preload="metadata" src="${v.url}"></video>
+          <video class="hover-video" muted loop playsinline preload="metadata" src="${v.url}"></video>
           <div class="play-badge" aria-hidden="true">
             <svg viewBox="0 0 100 100" fill="currentColor">
               <circle cx="50" cy="50" r="44" opacity=".25"></circle>
@@ -218,7 +253,7 @@ async function loadVideos(keepKey) {
           const head = await fetch(v.url, { method: "HEAD" });
           if (!head.ok) throw new Error(String(head.status));
         } catch {
-          await loadVideos(v.key);
+          await loadVideos(v.key); // si expiró la URL firmada, recarga lista
         }
       });
       grid.appendChild(card);
@@ -234,19 +269,19 @@ async function handleUpload(e) {
   const input = document.getElementById("video");
   const file = input?.files?.[0];
   if (!file) return;
-  status.textContent = "Subiendo...";
+  if (status) status.textContent = "Subiendo...";
   try {
     const fd = new FormData();
     fd.append("video", file);
     const r = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "Error de subida");
-    status.textContent = "✓ Subido";
+    if (status) status.textContent = "✓ Subido";
     await loadVideos();
   } catch (err) {
-    status.textContent = "Error: " + err.message;
+    if (status) status.textContent = "Error: " + err.message;
   } finally {
-    setTimeout(() => (status.textContent = ""), 3000);
+    setTimeout(() => status && (status.textContent = ""), 3000);
     if (input) input.value = "";
   }
 }
@@ -264,6 +299,7 @@ async function pagar() {
       return;
     }
     const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
+
     const res = await fetch(`${window.location.origin}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -284,29 +320,36 @@ async function pagar() {
     console.error("❌ /crear-pago error:", e);
   }
 }
+window.pagar = pagar; // por el onclick del HTML
 
 //////////////////////
-// MAPA 3D (Mapbox) — modo “caminar” (first‑person)
+// MAPBOX 3D — Token desde backend + modo caminar
 //////////////////////
+let MAPBOX_TOKEN = "";
 
-// ⚠️ Pega tu token público de Mapbox aquí:
+/** Carga token público (pk_) desde /config/mapbox e inicia el mapa 3D */
+async function loadMapboxTokenAndInit() {
+  const err = document.getElementById("map3d-error");
+  try {
+    const r = await fetch(`${API_BASE}/config/mapbox`, { cache: "no-store" });
+    const { mapboxToken, error } = await r.json();
+    if (!r.ok || !mapboxToken || error) throw new Error(error || "MAPBOX_PUBLIC_TOKEN ausente.");
+    if (!window.mapboxgl) throw new Error("Mapbox GL JS no cargado (revisa el <script> en Index.html).");
+    MAPBOX_TOKEN = mapboxToken;
+    initMap3DWalk();
+  } catch (e) {
+    if (err) err.textContent = "Mapbox no inicializó: " + e.message;
+    console.error(e);
+  }
+}
 
-
+/** Inicializa Mapbox con terreno, edificios 3D y free camera para caminar */
 function initMap3DWalk() {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+
   const el = document.getElementById("map3d");
   const errBox = document.getElementById("map3d-error");
   if (!el) return;
-
-  if (!window.mapboxgl) {
-    errBox && (errBox.textContent = "No se cargó Mapbox GL JS.");
-    return;
-  }
-  if (!MAPBOX_TOKEN || MAPBOX_TOKEN === "TU_MAPBOX_ACCESS_TOKEN") {
-    errBox && (errBox.textContent = "Falta MAPBOX_TOKEN en script.js");
-    return;
-  }
-
-  mapboxgl.accessToken = MAPBOX_TOKEN;
 
   const map = new mapboxgl.Map({
     container: "map3d",
@@ -321,25 +364,21 @@ function initMap3DWalk() {
   map.addControl(new mapboxgl.NavigationControl(), "top-right");
   map.addControl(new mapboxgl.FullscreenControl());
 
-  // Instrucciones overlay
+  // Ayuda visual (instrucciones)
   const hint = document.createElement("div");
-  hint.style.position = "absolute";
-  hint.style.right = "10px";
-  hint.style.bottom = "10px";
-  hint.style.background = "rgba(0,0,0,.55)";
-  hint.style.color = "#fff";
-  hint.style.padding = "8px 10px";
-  hint.style.borderRadius = "8px";
-  hint.style.fontSize = "12px";
-  hint.style.pointerEvents = "none";
-  hint.innerHTML = "Click para capturar mouse • W/A/S/D = mover • Ratón = mirar • Q/E = subir/bajar • Shift = sprint • Esc = liberar";
+  Object.assign(hint.style, {
+    position: "absolute", right: "10px", bottom: "10px",
+    background: "rgba(0,0,0,.55)", color: "#fff",
+    padding: "8px 10px", borderRadius: "8px",
+    fontSize: "12px", pointerEvents: "none"
+  });
+  hint.textContent = "Click para capturar mouse • W/A/S/D = mover • Ratón = mirar • Q/E = subir/bajar • Shift = sprint • Esc = liberar";
   el.appendChild(hint);
 
   map.on("style.load", () => {
-    // Cielo/fog
     map.setFog({ range: [0.5, 10], color: "#d6e5fb", "horizon-blend": 0.02 });
 
-    // DEM (terreno)
+    // Terreno (DEM)
     map.addSource("mapbox-dem", {
       type: "raster-dem",
       url: "mapbox://mapbox.mapbox-terrain-dem-v1",
@@ -369,20 +408,20 @@ function initMap3DWalk() {
   });
 }
 
-// Lógica de “first-person walking” con FreeCamera
+/** Lógica de “first‑person walking” usando FreeCamera */
 function setupFirstPerson(map, containerEl) {
   let pos = { lng: map.getCenter().lng, lat: map.getCenter().lat, alt: 20 };
   let yaw = map.getBearing() * Math.PI / 180;
   let pitch = -10 * Math.PI / 180;
-  let speed = 3.0;                 // m/s
-  const sprint = 2.0;
+  let speed = 3.0;           // m/s
+  const sprint = 2.0;        // multiplicador con Shift
   const deg = Math.PI / 180;
   const EARTH_R = 6378137;
   const keys = new Set();
   let pointerLocked = false;
   let lastTs = performance.now();
 
-  // Pointer lock para mirar con ratón
+  // Pointer Lock para controlar la vista con el ratón
   containerEl.addEventListener("click", () => {
     containerEl.requestPointerLock?.();
   });
@@ -399,11 +438,12 @@ function setupFirstPerson(map, containerEl) {
     if (pitch < -maxPitch) pitch = -maxPitch;
   });
 
-  // Teclado
+  // Teclado: W/A/S/D, Q/E, Shift
   window.addEventListener("keydown", (e) => keys.add(e.code));
   window.addEventListener("keyup",   (e) => keys.delete(e.code));
 
   function step(dt) {
+    // Dirección horizontal (yaw)
     const forwardX =  Math.cos(yaw);
     const forwardY =  Math.sin(yaw);
     const rightX   = -Math.sin(yaw);
@@ -419,6 +459,7 @@ function setupFirstPerson(map, containerEl) {
     if (keys.has("KeyQ")) { dz += v * dt; }
     if (keys.has("KeyE")) { dz -= v * dt; }
 
+    // Convertir dx (este), dy (norte) en delta lat/lng (aprox local)
     const dLat = (dy / EARTH_R) * (180 / Math.PI);
     const dLng = (dx / (EARTH_R * Math.cos(pos.lat * deg))) * (180 / Math.PI);
 
@@ -426,7 +467,7 @@ function setupFirstPerson(map, containerEl) {
     pos.lng = wrapLng(pos.lng + dLng);
     pos.alt = Math.max(1, pos.alt + dz);
 
-    // Calcular punto de enfoque
+    // Punto de enfoque adelante
     const forwardMeters = 10;
     const fx = Math.cos(pitch) * Math.cos(yaw);
     const fy = Math.cos(pitch) * Math.sin(yaw);
@@ -443,16 +484,17 @@ function setupFirstPerson(map, containerEl) {
   }
 
   function animate(ts) {
-    const dt = Math.min(0.05, (ts - lastTs) / 1000);
+    const dt = Math.min(0.05, (ts - lastTs) / 1000); // limitar a 50ms para suavidad
     lastTs = ts;
     step(dt);
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
 
+  // Helpers
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function wrapLng(lng) {
-    while (lng > 180) lng -= 360;
+    while (lng >  180) lng -= 360;
     while (lng < -180) lng += 360;
     return lng;
   }
@@ -466,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
   document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
 
-  // Atajos player: barra espaciadora play/pause
+  // Atajo player: barra espaciadora play/pause
   const mainVideo = document.getElementById("main-video");
   document.addEventListener("keydown", (e) => {
     if (!mainVideo) return;
@@ -480,6 +522,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Carga inicial de videos
   loadVideos();
 
-  // Inicia Mapbox 3D (modo caminar)
-  initMap3DWalk();
+  // Mapbox: obtener token desde backend e iniciar
+  loadMapboxTokenAndInit();
 });
