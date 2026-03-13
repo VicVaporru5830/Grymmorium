@@ -2,28 +2,29 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0" />
   <title>ARK</title>
+
+  <!-- Mapbox GL CSS -->
+  <link
+    rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css"
+    integrity="sha384-nuQ3cPpQhB+xT3c0T0k5w7ZV6v2v6i2oE9X9b3wV8vA8yG2qgkFq3gqk9k3p2z1N"
+    crossorigin="anonymous"
+  />
 
   <!-- Tus estilos -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Three.js y Loaders desde CDN (URLs completas y correctas) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/DRACOLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/OBJLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
 </head>
-
 <body>
   <div class="overlay"></div>
 
   <div class="container">
     <h1>ARK</h1>
 
-    <!-- ======== REDES ======== -->
+    <!-- REDES -->
     <h2>Redes Sociales</h2>
     <div class="social-buttons">
       <button onclick="cargarVideosYouTube()">Ver videos YouTube</button>
@@ -34,19 +35,24 @@
     <p id="youtube-error" class="error"></p>
     <p id="facebook-error" class="error"></p>
 
-    <!-- ======== 2FA ======== -->
+    <!-- 2FA -->
     <h2>Verificación en 2 pasos</h2>
     <input type="text" id="codigo" placeholder="Ingresa código" />
     <button onclick="verificarCodigo()">Verificar</button>
     <p id="verificacion-msg"></p>
 
-    <!-- ======== IA ======== -->
+    <!-- MAPA GOOGLE (2D) -->
+    <h2>Mapa</h2>
+    <div id="map"></div>
+    <p id="map-error" class="error"></p>
+
+    <!-- IA -->
     <h2>Chat IA sobre Dinosaurios</h2>
     <input type="text" id="pregunta" placeholder="Pregunta sobre dinosaurios" />
     <button onclick="preguntarIA()">Preguntar</button>
     <p id="respuesta"></p>
 
-    <!-- ======== REPRODUCTOR ======== -->
+    <!-- REPRODUCTOR -->
     <h2>Reproductor</h2>
     <div class="player">
       <div class="player-wrap">
@@ -60,7 +66,7 @@
       </div>
     </div>
 
-    <!-- ======== PAGOS ======== -->
+    <!-- PAGOS -->
     <h2>Apoyar el proyecto</h2>
     <p style="text-align:center; margin: 0 0 10px;">
       Si te gusta este proyecto, puedes apoyar con una donación. 🙌
@@ -70,7 +76,7 @@
       <button onclick="pagar()">💳 Pagar $12 MXN</button>
     </div>
 
-    <!-- ======== STREAMING ======== -->
+    <!-- STREAMING -->
     <h2>Mis Videos (Streaming)</h2>
     <form id="uploadForm" enctype="multipart/form-data">
       <label>Subir video MP4/WEBM/OGG:</label>
@@ -81,23 +87,33 @@
     <button id="refreshBtn" type="button">Actualizar lista</button>
     <div id="videos-grid"></div>
 
-    <!-- ======== VISOR 3D NATIVO ======== -->
-    <h2>Visor 3D</h2>
-    <div id="viewer3d">
-      <div id="model-status">
-        Arrastra aquí un .glb/.gltf/.obj/.stl o usa “Cargar modelo 3D”
-      </div>
-    </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-      <!-- OJO: .glb (no .gbl) -->
-      <input type="file" id="modelInput" accept=".gltf,.glb,.obj,.stl" />
-      <button onclick="cargarModelo3D()">Cargar modelo 3D</button>
-      <button onclick="resetCamara3D()">Reset cámara</button>
-      <button onclick="toggleFondo3D()">Fondo claro/oscuro</button>
-    </div>
+    <!-- MAPA 3D (Mapbox) -->
+    <h2>Mapa 3D</h2>
+    <div id="map3d"></div>
   </div>
 
-  <!-- Tu JS principal DEBE ir al final, después de cargar Three y los loaders -->
-  <script src="script.js"></script>
+  <!-- Tu JS principal -->
+  <script src="script.js" defer></script>
+
+  <!-- Mapbox GL JS -->
+  <script
+    src="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.js"
+    integrity="sha384-T2y7c5L1JwL8F8rV8E7k2p6kq2gXJ8n3j8dVQqj2kQ4Jp4m7JQj2Gk3v7yXv7c2Q"
+    crossorigin="anonymous"
+    defer
+  ></script>
+
+  <!-- Google Maps: si ya tienes key, deja esta línea. Si no, coméntala. -->
+  <script>
+    function gm_authFailure() {
+      const el = document.getElementById("map-error");
+      if (el) el.innerText = "Error: API Key inválida o dominio no autorizado en Google Maps.";
+    }
+  </script>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=TU_GOOGLE_MAPS_API_KEY&callback=initMap"
+    async
+    defer
+  ></script>
 </body>
 </html>
