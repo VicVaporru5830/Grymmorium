@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const path = require("path"); // ✅ Ya está aquí. No volver a declararlo más abajo.
+const path = require("path");
 const axios = require("axios");
 
 // Streaming (Cloudflare R2)
@@ -24,9 +24,9 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-// Correo (opcional)
+// Correo
 let sendReceiptEmail = async () => {};
-try {
+try { // mailer opcional (evita crash si no está el archivo)
   ({ sendReceiptEmail } = require("./mailer"));
 } catch (e) {
   console.warn("[WARN] mailer no encontrado, usando función vacía");
@@ -74,7 +74,7 @@ app.use(
 // Estáticos (sirve index.html, script.js, style.css, etc.)
 app.use(express.static(path.join(__dirname)));
 
-// Logging simple
+// Logging
 app.use((req, _res, next) => {
   console.log(`➡️  ${req.method} ${req.url}`);
   next();
@@ -103,9 +103,11 @@ app.post(
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
+      // Evento de éxito en Checkout
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
 
+        // Obtener line items
         let lineItems = { data: [] };
         try {
           lineItems = await stripe.checkout.sessions.listLineItems(session.id);
@@ -113,6 +115,7 @@ app.post(
           console.error("⚠️ Error listando line items:", err.message);
         }
 
+        // Enviar ticket (con PDF si ya integraste el generador)
         try {
           await sendReceiptEmail({
             session,
@@ -127,7 +130,7 @@ app.post(
       return res.json({ received: true });
     } catch (e) {
       console.error("🔥 Error Webhook:", e.message);
-      return res.status(200).end();
+      return res.status(200).end(); // evita reintentos agresivos
     }
   }
 );
@@ -145,7 +148,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html")); // usa index.html (minúsculas)
+  res.sendFile(path.join(__dirname, "Index.html"));
 });
 
 /* ------------------------- IA ------------------------- */
@@ -154,50 +157,32 @@ app.post("/chat", async (req, res) => {
     if (!process.env.HF_API_KEY)
       return res.status(500).json({ error: "Falta HF_API_KEY" });
 
-    const { pregunta } = req.body || {};
-    if (!pregunta || typeof pregunta !== "string" || !pregunta.trim())
+    const { pregunta } = req.body;
+    if (!pregunta)
       return res.status(400).json({ error: "Falta pregunta" });
 
-    // Endpoint compatible (estable) de Hugging Face
-    const HF_CHAT_URL = "https://api-inference.huggingface.co/v1/chat/completions";
-    // Modelo que soporta chat/completions (ajústalo a tu cuenta)
-    const MODEL = "HuggingFaceH4/zephyr-7b-beta";
-    // Alternativas si tu cuenta lo permite:
-    // const MODEL = "meta-llama/Llama-3.1-8B-Instruct";
-
     const response = await axios.post(
-      HF_CHAT_URL,
+      "https://router.huggingface.co/v1/chat/completions",
       {
-        model: MODEL,
+        model: "mistralai/Mistral-7B-Instruct-v0.2",
         messages: [
           { role: "system", content: "Eres experto en dinosaurios." },
-          { role: "user", content: pregunta.trim() },
+          { role: "user", content: pregunta },
         ],
         max_tokens: 250,
-        temperature: 0.7,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.HF_API_KEY}`,
           "Content-Type": "application/json",
         },
-        timeout: 30000,
       }
     );
 
     const txt = response.data?.choices?.[0]?.message?.content?.trim();
     res.json({ respuesta: txt || "Sin respuesta" });
   } catch (err) {
-    const status = err?.response?.status;
-    const data = err?.response?.data;
-    console.error("HF error:", status, data || err.message);
-
-    const safeMsg =
-      (typeof data === "string" && data) ||
-      data?.error ||
-      err.message ||
-      "Error desconocido";
-    res.status(500).json({ error: `HF: ${status || 500} ${safeMsg}` });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -207,16 +192,18 @@ app.get("/youtube", async (_req, res) => {
     if (!process.env.YOUTUBE_API_KEY)
       return res.status(500).json({ error: "Falta YOUTUBE_API_KEY" });
 
-    const r = await axios.get("https://www.googleapis.com/youtube/v3/search", {
-      params: {
-        part: "snippet",
-        q: "Animales prehistóricos documentales",
-        type: "video",
-        maxResults: 6,
-        key: process.env.YOUTUBE_API_KEY,
-      },
-      timeout: 15000,
-    });
+    const r = await axios.get(
+      "https://www.googleapis.com/youtube/v3/search",
+      {
+        params: {
+          part: "snippet",
+          q: "Animales prehistóricos documentales",
+          type: "video",
+          maxResults: 6,
+          key: process.env.YOUTUBE_API_KEY,
+        },
+      }
+    );
 
     res.json(r.data);
   } catch (err) {
@@ -237,7 +224,6 @@ app.get("/facebook", async (_req, res) => {
           fields: "message,permalink_url,created_time",
           access_token: process.env.FB_ACCESS_TOKEN,
         },
-        timeout: 15000,
       }
     );
 
@@ -351,13 +337,12 @@ app.get("/videos", async (_req, res) => {
 });
 
 /* ============================ MODELOS 3D ============================ */
-// ❌ OJO: NO volver a poner `const path = require("path");` aquí.
-// Ya lo importamos al principio. Usamos el mismo `path`.
+/** Acepta extensiones comunes. Ojo: algunos navegadores suben OBJ/STL como application/octet-stream. */
 const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
 
 const uploadModel = multer({
   storage,
-  limits: { fileSize: 1024 * 1024 * 100 }, // 100MB
+  limits: { fileSize: 1024 * 1024 * 100 }, // 100MB (ajusta a tu gusto)
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!allowedModelExt.has(ext)) {
@@ -367,6 +352,7 @@ const uploadModel = multer({
   },
 });
 
+/** Subir un modelo: campo 'model' */
 app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
   const temp = req.file?.path;
   try {
@@ -390,6 +376,7 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
 
     fs.unlink(temp, () => {});
 
+    // Te regreso también una URL prefirmada listita para usar 1 hora
     const url = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }),
@@ -403,6 +390,7 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
   }
 });
 
+/** Listar modelos */
 app.get("/models", async (_req, res) => {
   try {
     if (!process.env.S3_BUCKET)
@@ -450,12 +438,12 @@ app.post("/crear-pago", async (req, res) => {
     if (!stripe)
       return res.status(500).json({ error: "Stripe no configurado" });
 
-    const { buyerEmail } = req.body || {};
+    const { buyerEmail } = req.body;
     const baseUrl = process.env.BASE_URL?.trim() || getBaseUrl(req);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: buyerEmail,
+      customer_email: buyerEmail, // envía el correo capturado al Checkout
       line_items: [
         {
           price_data: {
@@ -482,6 +470,7 @@ app.post("/debug-send", async (req, res) => {
     const to = (req.body?.to || "").trim();
     if (!to) return res.status(400).json({ error: "Falta 'to' en body" });
 
+    // Simula una sesión y line items
     const fakeSession = {
       id: "debug_session_123",
       amount_total: 1200,
