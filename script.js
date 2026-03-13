@@ -290,7 +290,7 @@ async function pagar() {
 //////////////////////
 
 // ⚠️ Pega tu token público de Mapbox aquí:
-const MAPBOX_TOKEN = "TU_MAPBOX_ACCESS_TOKEN";
+
 
 function initMap3DWalk() {
   const el = document.getElementById("map3d");
