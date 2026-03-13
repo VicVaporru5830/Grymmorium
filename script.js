@@ -3,12 +3,11 @@
 /************** BASE DEL API *****************/
 const API_BASE = window.location.origin; // mismo host/puerto del server
 
-/************** UTILIDADES *******************/
+/************** UTIL *************************/
 function getFileNameFromKey(key = "") {
   try { return key.split("/").pop() || key || "archivo"; }
   catch { return key || "archivo"; }
 }
-
 function formatBytes(bytes) {
   if (bytes === undefined || bytes === null) return "";
   const u = ["B","KB","MB","GB","TB"];
@@ -17,7 +16,7 @@ function formatBytes(bytes) {
   return `${v.toFixed(v < 10 && i > 1 ? 1 : 0)} ${u[i]}`;
 }
 
-/************** STREAMING (VIDEOS) ***********/
+/************** PLAYER + LISTA ***************/
 function setFeatured(videoObj = {}) {
   const mainVideo = document.getElementById("main-video");
   const mainFilename = document.getElementById("main-filename");
@@ -27,15 +26,12 @@ function setFeatured(videoObj = {}) {
   try { mainVideo.pause(); } catch {}
   mainVideo.src = videoObj.url || "";
   mainVideo.currentTime = 0;
-
-  // Autoplay cross-browser
-  mainVideo.muted = true;
+  mainVideo.muted = true; // autoplay-friendly
   mainVideo.play().catch(() => {});
 
   const name = getFileNameFromKey(videoObj.key || "");
   const size = formatBytes(videoObj.size);
   const fecha = videoObj.lastModified ? new Date(videoObj.lastModified).toLocaleString() : "";
-
   mainFilename.textContent = name || "Video";
   mainExtra.textContent = `${size ? `Tamaño: ${size} · ` : ""}${fecha ? `Modificado: ${fecha}` : ""}`;
 }
@@ -70,6 +66,7 @@ async function loadVideos(keepKey) {
       const card = document.createElement("div");
       card.className = "video-card";
       card.title = v.key;
+
       card.innerHTML = `
         <div class="video-wrap">
           <video class="hover-video" src="${v.url}" muted loop playsinline preload="metadata"></video>
@@ -82,10 +79,6 @@ async function loadVideos(keepKey) {
           <div class="video-overlay">
             <span class="video-filename">${fileName}</span>
           </div>
-        </div>
-        <div class="video-meta">
-          <div><b>Tamaño:</b> ${formatBytes(v.size)}</div>
-          <div><b>Modificado:</b> ${v.lastModified ? new Date(v.lastModified).toLocaleString() : ""}</div>
         </div>
       `;
 
@@ -108,15 +101,15 @@ async function loadVideos(keepKey) {
           const head = await fetch(v.url, { method: "HEAD" });
           if (!head.ok) throw new Error(String(head.status));
         } catch {
-          await loadVideos(v.key);
+          await loadVideos(v.key); // refresca URL firmada si expiró
         }
       });
 
       grid.appendChild(card);
     });
   } catch (e) {
-    grid.innerHTML = "Error al cargar videos";
     console.error(e);
+    grid.innerHTML = "Error al cargar videos";
   }
 }
 
@@ -144,7 +137,7 @@ async function handleUpload(e) {
   }
 }
 
-/************** PAGOS (Stripe Checkout) ******/
+/************** PAGOS (Stripe) ***************/
 async function pagar() {
   try {
     const emailInput = document.getElementById("buyerEmail");
@@ -166,46 +159,45 @@ async function pagar() {
       throw new Error(`HTTP ${res.status} ${txt}`);
     }
     const data = await res.json();
-    if (data?.url) {
-      window.location.href = data.url;
-    } else {
-      alert("No se pudo iniciar el pago (sin URL de Stripe)");
-    }
+    if (data?.url) window.location.href = data.url;
+    else alert("No se pudo iniciar el pago (sin URL de Stripe)");
   } catch (e) {
     alert("Error al iniciar pago: " + e.message);
-    console.error("✒️ /crear-pago error:", e);
+    console.error("❌ /crear-pago error:", e);
   }
 }
+window.pagar = pagar; // el botón inline lo necesita
 
 /************** MAPA 3D (Mapbox GL) **********/
-const MAPBOX_TOKEN = "TU_MAPBOX_ACCESS_TOKEN"; // <-- pega aquí tu token público
+const MAPBOX_TOKEN = "TU_MAPBOX_ACCESS_TOKEN"; // <-- pega aquí tu token
 
 function initMap3D() {
   try {
     if (!window.mapboxgl) {
-      console.error("Mapbox GL JS no cargó.");
+      console.error("Mapbox GL JS no cargó (revisa la etiqueta <script>).");
+      return;
+    }
+    if (!MAPBOX_TOKEN || MAPBOX_TOKEN === "TU_MAPBOX_ACCESS_TOKEN") {
+      console.error("⚠️ Falta MAPBOX_TOKEN en script.js");
       return;
     }
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Verificar soporte WebGL
     if (!mapboxgl.supported()) {
       console.warn("Mapbox GL no soportado en este navegador/dispositivo.");
       return;
     }
 
-    // CDMX con inclinación y rotación para ver 3D
     const map3d = new mapboxgl.Map({
       container: "map3d",
-      style: "mapbox://styles/mapbox/streets-v12", // prueba también "satellite-streets-v12"
-      center: [-99.1332, 19.4326],
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [-99.1332, 19.4326], // CDMX
       zoom: 14,
       pitch: 60,
       bearing: 40,
       antialias: true
     });
 
-    // Controles
     map3d.addControl(new mapboxgl.NavigationControl());
     map3d.addControl(new mapboxgl.FullscreenControl());
     map3d.addControl(new mapboxgl.GeolocateControl({
@@ -214,16 +206,9 @@ function initMap3D() {
       showAccuracyCircle: false
     }));
 
-    // Terreno + edificios 3D + "cielo"
     map3d.on("style.load", () => {
-      // Cielo/fog
-      map3d.setFog({
-        "range": [0.5, 10],
-        "color": "#d6e5fb",
-        "horizon-blend": 0.02
-      });
+      map3d.setFog({ "range": [0.5, 10], "color": "#d6e5fb", "horizon-blend": 0.02 });
 
-      // DEM (terreno)
       map3d.addSource("mapbox-dem", {
         type: "raster-dem",
         url: "mapbox://mapbox.mapbox-terrain-dem-v1",
@@ -232,7 +217,6 @@ function initMap3D() {
       });
       map3d.setTerrain({ source: "mapbox-dem", exaggeration: 1.3 });
 
-      // Edificios 3D
       map3d.addLayer({
         id: "3d-buildings",
         source: "composite",
@@ -255,11 +239,9 @@ function initMap3D() {
 
 /************** INIT *************************/
 document.addEventListener("DOMContentLoaded", () => {
-  // Upload/lista
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
   document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
 
-  // Atajo: barra espaciadora play/pause
   const mainVideo = document.getElementById("main-video");
   document.addEventListener("keydown", (e) => {
     if (!mainVideo) return;
@@ -270,12 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Carga inicial de videos
   loadVideos();
-
-  // Inicia mapa 3D
   initMap3D();
 });
-
-// Exportar pagar al global (porque lo llama el botón inline)
-window.pagar = pagar;
