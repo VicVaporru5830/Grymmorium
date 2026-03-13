@@ -26,7 +26,8 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 // Correo
 let sendReceiptEmail = async () => {};
-try { // mailer opcional (evita crash si no está el archivo)
+try {
+  // mailer opcional (evita crash si no está el archivo)
   ({ sendReceiptEmail } = require("./mailer"));
 } catch (e) {
   console.warn("[WARN] mailer no encontrado, usando función vacía");
@@ -37,8 +38,10 @@ app.set("trust proxy", 1);
 
 /* ------------------------- UTIL ------------------------- */
 function getBaseUrl(req) {
-  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http").split(",")[0].trim();
-  const host = (req.headers["x-forwarded-host"] || req.get("host") || "").split(",")[0].trim();
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http")
+    .split(",")[0].trim();
+  const host = (req.headers["x-forwarded-host"] || req.get("host") || "")
+    .split(",")[0].trim();
   return `${proto}://${host}`;
 }
 
@@ -58,7 +61,8 @@ console.log("===== VARIABLES DE ENTORNO =====");
   "BASE_URL",
   "SENDGRID_API_KEY",
   "MAIL_FROM",
-  "SELLER_EMAIL"
+  "SELLER_EMAIL",
+  "MAPBOX_PUBLIC_TOKEN", // ⭐ agregado: para verificar que esté configurado
 ].forEach(v => console.log(v, process.env[v] ? "✅" : "❌"));
 console.log("=======================================================");
 
@@ -121,7 +125,10 @@ app.post(
             session,
             lineItems: lineItems.data,
           });
-          console.log("📧 Ticket enviado a:", session.customer_details?.email || session.customer_email);
+          console.log(
+            "📧 Ticket enviado a:",
+            session.customer_details?.email || session.customer_email
+          );
         } catch (mailErr) {
           console.error("❌ Error enviando email:", mailErr.message);
         }
@@ -148,7 +155,28 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/", (req, res) => {
+  // Mantengo tu Index.html (con I mayúscula)
   res.sendFile(path.join(__dirname, "Index.html"));
+});
+
+/* ------------------------- CONFIG PÚBLICA (MAPBOX) ------------------------- */
+// ⭐ agregado: endpoint que entrega SOLO el token público (pk_) para el front
+app.get("/config/mapbox", (_req, res) => {
+  const token = process.env.MAPBOX_PUBLIC_TOKEN || "";
+  // Recomendación: exigir que sea un token público pk_
+  if (!token) {
+    return res.status(500).json({
+      mapboxToken: "",
+      error: "MAPBOX_PUBLIC_TOKEN no configurado en el servidor.",
+    });
+  }
+  if (!token.startsWith("pk.")) {
+    return res.status(500).json({
+      mapboxToken: "",
+      error: "MAPBOX_PUBLIC_TOKEN debe ser un token público (pk_).",
+    });
+  }
+  res.json({ mapboxToken: token });
 });
 
 /* ------------------------- IA ------------------------- */
@@ -248,8 +276,8 @@ const s3 = new S3Client({
 
 /* ------------------------- MULTER (disco temporal) ------------------------- */
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, os.tmpdir()),
-  filename: (req, file, cb) => {
+  destination: (_req, _file, cb) => cb(null, os.tmpdir()),
+  filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase() || ".bin";
     cb(null, `${uuidv4()}${ext}`);
   },
@@ -261,7 +289,7 @@ const allowedVideoMimes = ["video/mp4", "video/webm", "video/ogg"];
 const uploadVideo = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 500 }, // 500MB
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     if (!allowedVideoMimes.includes(file.mimetype)) {
       return cb(new Error("Formato inválido (solo MP4/WEBM/OGG)."));
     }
@@ -343,7 +371,7 @@ const allowedModelExt = new Set([".glb", ".gltf", ".obj", ".stl"]);
 const uploadModel = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 100 }, // 100MB (ajusta a tu gusto)
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!allowedModelExt.has(ext)) {
       return cb(new Error("Solo se permiten modelos .glb, .gltf, .obj, .stl"));
@@ -363,7 +391,9 @@ app.post("/upload-model", uploadModel.single("model"), async (req, res) => {
       return res.status(400).json({ error: "No file 'model'" });
 
     const key = `models/${req.file.filename}`;
-    const contentType = mime.contentType(path.extname(req.file.originalname)) || "application/octet-stream";
+    const contentType =
+      mime.contentType(path.extname(req.file.originalname)) ||
+      "application/octet-stream";
 
     await s3.send(
       new PutObjectCommand({
@@ -477,10 +507,16 @@ app.post("/debug-send", async (req, res) => {
       currency: "mxn",
       customer_email: to,
       customer_details: { email: to },
-      created: Math.floor(Date.now() / 1000)
+      created: Math.floor(Date.now() / 1000),
     };
     const fakeItems = [
-      { description: "Donación ARK", quantity: 1, amount_total: 1200, amount_subtotal: 1035, price: { unit_amount: 1200 } }
+      {
+        description: "Donación ARK",
+        quantity: 1,
+        amount_total: 1200,
+        amount_subtotal: 1035,
+        price: { unit_amount: 1200 },
+      },
     ];
 
     await sendReceiptEmail({ session: fakeSession, lineItems: fakeItems });
