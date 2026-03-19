@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ark</title>
 
-  <!-- Estilos -->
+  <!-- Estilos principales -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -22,8 +22,11 @@
     }
   </style>
 
-  <!-- Mapbox CSS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css" rel="stylesheet" />
+  <!-- Mapbox GL CSS -->
+  <link 
+    href="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css" 
+    rel="stylesheet" 
+  />
 </head>
 
 <body>
@@ -48,7 +51,7 @@
     <p id="youtube-error" class="error"></p>
     <p id="facebook-error" class="error"></p>
 
-    <!-- ==================== 2FA SENDGRID ==================== -->
+    <!-- 2FA -->
     <h2>Verificación en 2 pasos</h2>
 
     <button onclick="enviarCodigo()">📩 Enviar código a mi correo</button>
@@ -58,7 +61,6 @@
     <button onclick="verificarCodigo()">Verificar código</button>
 
     <p id="verificacion-msg"></p>
-    <!-- ==================== FIN 2FA ==================== -->
 
     <!-- MAPA -->
     <h2>Mapa</h2>
