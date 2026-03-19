@@ -1,9 +1,12 @@
+//** -------------- TU SCRIPT.JS COMPLETO CON CORRECCIÓN MAPBOX 3D -------------- **/
+
 /* ============================
    script.js — Proyecto ARK
    ============================
-   - SIN Three.js (eliminado)
-   - Mapbox GL 3D (modo caminar) con token desde /config/mapbox
-   - Conserva: Google Maps 2D, IA, YouTube, Facebook, Streaming (R2), Stripe, 2FA
+   - SIN Three.js
+   - Mapbox GL 3D (modo caminar)
+   - Google Maps 2D
+   - IA / YouTube / Facebook / Streaming / Stripe / 2FA
 ================================ */
 
 //////////////////////
@@ -57,6 +60,7 @@ async function verificarCodigo() {
 
 window.enviarCodigo = enviarCodigo;
 window.verificarCodigo = verificarCodigo;
+
 //////////////////////
 // GOOGLE MAPS (2D)
 //////////////////////
@@ -73,7 +77,7 @@ function initMap() {
     console.error(error);
   }
 }
-window.initMap = initMap; // necesario para callback=?initMap
+window.initMap = initMap;
 
 //////////////////////
 // IA DINOSAURIOS
@@ -149,6 +153,7 @@ window.cargarVideosYouTube = cargarVideosYouTube;
 function escapeHtml(s = "") {
   return s.replace(/[&<>\"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
 async function cargarPostsFacebook() {
   const contenedor = document.getElementById("facebook-posts");
   const errorBox = document.getElementById("facebook-error");
@@ -194,27 +199,30 @@ function formatBytes(bytes) {
   while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
   return `${v.toFixed(v < 10 && i > 1 ? 1 : 0)} ${u[i]}`;
 }
+
 function setFeatured(videoObj) {
   const mainVideo = document.getElementById("main-video");
   const mainFilename = document.getElementById("main-filename");
   const mainExtra = document.getElementById("main-extra");
   if (!mainVideo) return;
+
   try { mainVideo.pause(); } catch {}
   mainVideo.src = videoObj?.url || "";
   mainVideo.currentTime = 0;
 
-  // Mejor compatibilidad de autoplay (algunas plataformas requieren muted)
   mainVideo.muted = true;
   mainVideo.play().catch(() => {});
 
   const name = getFileNameFromKey(videoObj?.key || "");
   const size = formatBytes(videoObj?.size);
   const fecha = videoObj?.lastModified ? new Date(videoObj.lastModified).toLocaleString() : "";
+  
   if (mainFilename) mainFilename.textContent = name || "Video";
   if (mainExtra) mainExtra.textContent = `${size ? `Tamaño: ${size} · ` : ""}${fecha ? `Modificado: ${fecha}` : ""}`;
 
   document.querySelector(".player")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 async function loadVideos(keepKey) {
   const grid = document.getElementById("videos-grid");
   if (!grid) return;
@@ -281,7 +289,7 @@ async function loadVideos(keepKey) {
           const head = await fetch(v.url, { method: "HEAD" });
           if (!head.ok) throw new Error(String(head.status));
         } catch {
-          await loadVideos(v.key); // si expiró la URL firmada, recarga lista
+          await loadVideos(v.key);
         }
       });
       grid.appendChild(card);
@@ -291,6 +299,7 @@ async function loadVideos(keepKey) {
     console.error(e);
   }
 }
+
 async function handleUpload(e) {
   e.preventDefault();
   const status = document.getElementById("upload-status");
@@ -348,14 +357,13 @@ async function pagar() {
     console.error("❌ /crear-pago error:", e);
   }
 }
-window.pagar = pagar; // por el onclick del HTML
+window.pagar = pagar;
 
 //////////////////////
-// MAPBOX 3D — Token desde backend + modo caminar
+// MAPBOX 3D — corregido
 //////////////////////
 let MAPBOX_TOKEN = "";
 
-/** Carga token público (pk_) desde /config/mapbox e inicia el mapa 3D */
 async function loadMapboxTokenAndInit() {
   const err = document.getElementById("map3d-error");
   try {
@@ -371,18 +379,16 @@ async function loadMapboxTokenAndInit() {
   }
 }
 
-/** Inicializa Mapbox con terreno, edificios 3D y free camera para caminar */
 function initMap3DWalk() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
 
   const el = document.getElementById("map3d");
-  const errBox = document.getElementById("map3d-error");
   if (!el) return;
 
   const map = new mapboxgl.Map({
     container: "map3d",
     style: "mapbox://styles/mapbox/streets-v12",
-    center: [-99.1332, 19.4326], // CDMX
+    center: [-99.1332, 19.4326],
     zoom: 16,
     pitch: 60,
     bearing: 40,
@@ -392,7 +398,6 @@ function initMap3DWalk() {
   map.addControl(new mapboxgl.NavigationControl(), "top-right");
   map.addControl(new mapboxgl.FullscreenControl());
 
-  // Ayuda visual (instrucciones)
   const hint = document.createElement("div");
   Object.assign(hint.style, {
     position: "absolute", right: "10px", bottom: "10px",
@@ -406,7 +411,6 @@ function initMap3DWalk() {
   map.on("style.load", () => {
     map.setFog({ range: [0.5, 10], color: "#d6e5fb", "horizon-blend": 0.02 });
 
-    // Terreno (DEM)
     map.addSource("mapbox-dem", {
       type: "raster-dem",
       url: "mapbox://mapbox.mapbox-terrain-dem-v1",
@@ -415,7 +419,6 @@ function initMap3DWalk() {
     });
     map.setTerrain({ source: "mapbox-dem", exaggeration: 1.3 });
 
-    // Edificios 3D
     map.addLayer({
       id: "3d-buildings",
       source: "composite",
@@ -431,25 +434,22 @@ function initMap3DWalk() {
       }
     });
 
-    // Activar modo caminar
     setupFirstPerson(map, el);
   });
 }
 
-/** Lógica de “first‑person walking” usando FreeCamera */
 function setupFirstPerson(map, containerEl) {
   let pos = { lng: map.getCenter().lng, lat: map.getCenter().lat, alt: 20 };
   let yaw = map.getBearing() * Math.PI / 180;
   let pitch = -10 * Math.PI / 180;
-  let speed = 3.0;           // m/s
-  const sprint = 2.0;        // multiplicador con Shift
+  let speed = 3.0;
+  const sprint = 2.0;
   const deg = Math.PI / 180;
   const EARTH_R = 6378137;
   const keys = new Set();
   let pointerLocked = false;
   let lastTs = performance.now();
 
-  // Pointer Lock para controlar la vista con el ratón
   containerEl.addEventListener("click", () => {
     containerEl.requestPointerLock?.();
   });
@@ -466,12 +466,10 @@ function setupFirstPerson(map, containerEl) {
     if (pitch < -maxPitch) pitch = -maxPitch;
   });
 
-  // Teclado: W/A/S/D, Q/E, Shift
   window.addEventListener("keydown", (e) => keys.add(e.code));
   window.addEventListener("keyup",   (e) => keys.delete(e.code));
 
   function step(dt) {
-    // Dirección horizontal (yaw)
     const forwardX =  Math.cos(yaw);
     const forwardY =  Math.sin(yaw);
     const rightX   = -Math.sin(yaw);
@@ -487,7 +485,6 @@ function setupFirstPerson(map, containerEl) {
     if (keys.has("KeyQ")) { dz += v * dt; }
     if (keys.has("KeyE")) { dz -= v * dt; }
 
-    // Convertir dx (este), dy (norte) en delta lat/lng (aprox local)
     const dLat = (dy / EARTH_R) * (180 / Math.PI);
     const dLng = (dx / (EARTH_R * Math.cos(pos.lat * deg))) * (180 / Math.PI);
 
@@ -495,7 +492,6 @@ function setupFirstPerson(map, containerEl) {
     pos.lng = wrapLng(pos.lng + dLng);
     pos.alt = Math.max(1, pos.alt + dz);
 
-    // Punto de enfoque adelante
     const forwardMeters = 10;
     const fx = Math.cos(pitch) * Math.cos(yaw);
     const fy = Math.cos(pitch) * Math.sin(yaw);
@@ -506,20 +502,22 @@ function setupFirstPerson(map, containerEl) {
 
     const cam = map.getFreeCameraOptions();
     const mc = mapboxgl.MercatorCoordinate.fromLngLat([pos.lng, pos.lat], pos.alt);
-    cam.position = mc.toVector3();
+
+    /** ✔ CORRECCIÓN IMPORTANTE — Mapbox GL JS v3 ya no usa toVector3() */
+    cam.position = [mc.x, mc.y, mc.z];
+
     cam.lookAtPoint(target);
     map.setFreeCameraOptions(cam);
   }
 
   function animate(ts) {
-    const dt = Math.min(0.05, (ts - lastTs) / 1000); // limitar a 50ms para suavidad
+    const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
     step(dt);
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
 
-  // Helpers
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function wrapLng(lng) {
     while (lng >  180) lng -= 360;
@@ -532,11 +530,9 @@ function setupFirstPerson(map, containerEl) {
 // INIT
 //////////////////////
 document.addEventListener("DOMContentLoaded", () => {
-  // Upload/lista
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
   document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
 
-  // Atajo player: barra espaciadora play/pause
   const mainVideo = document.getElementById("main-video");
   document.addEventListener("keydown", (e) => {
     if (!mainVideo) return;
@@ -547,9 +543,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Carga inicial de videos
   loadVideos();
-
-  // Mapbox: obtener token desde backend e iniciar
   loadMapboxTokenAndInit();
 });
