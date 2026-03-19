@@ -1,32 +1,33 @@
 /* ============================
    script.js — Proyecto ARK
    ============================
-   - SIN Three.js
-   - Mapbox GL 3D (modo caminar)
-   - Google Maps 2D
-   - IA / YouTube / Facebook / Streaming / Stripe / 2FA
+   - SIN Three.js (eliminado)
+   - Mapbox GL 3D (modo caminar) con token desde /config/mapbox
+   - Conserva: Google Maps 2D, IA, YouTube, Facebook, Streaming (R2), Stripe, 2FA
 ================================ */
 
-// =========================
+//////////////////////
 // BASE DEL API
-// =========================
+//////////////////////
 const API_BASE = window.location.origin;
 
-// =========================
-// 2FA
-// =========================
+//////////////////////
+// 2FA SIMPLE
+//////////////////////
 async function enviarCodigo() {
   const email = prompt("Ingresa tu correo para enviarte el código:");
+
   if (!email) return alert("Debes ingresar un correo.");
 
-  const res = await fetch(`${API_BASE}/enviar-codigo`, {
+  const r = await fetch(`${API_BASE}/enviar-codigo`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email })
   });
 
-  const data = await res.json();
-  if (!res.ok) return alert("Error: " + data.error);
+  const data = await r.json();
+
+  if (!r.ok) return alert("Error: " + data.error);
 
   alert("Código enviado a tu correo.");
 }
@@ -37,15 +38,15 @@ async function verificarCodigo() {
 
   msg.innerText = "Verificando...";
 
-  const res = await fetch(`${API_BASE}/verificar-codigo`, {
+  const r = await fetch(`${API_BASE}/verificar-codigo`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ codigo }),
+    body: JSON.stringify({ codigo })
   });
 
-  const data = await res.json();
+  const data = await r.json();
 
-  if (res.ok) {
+  if (r.ok) {
     msg.style.color = "green";
     msg.innerText = "Código correcto ✔️";
   } else {
@@ -56,393 +57,499 @@ async function verificarCodigo() {
 
 window.enviarCodigo = enviarCodigo;
 window.verificarCodigo = verificarCodigo;
-
-// =========================
-// GOOGLE MAPS
-// =========================
+//////////////////////
+// GOOGLE MAPS (2D)
+//////////////////////
 function initMap() {
   try {
     const ubicacion = { lat: 19.4326, lng: -99.1332 };
     const el = document.getElementById("map");
     if (!el || !window.google?.maps) return;
-
-    const map = new google.maps.Map(el, {
-      zoom: 10,
-      center: ubicacion,
-    });
-
+    const map = new google.maps.Map(el, { zoom: 10, center: ubicacion });
     new google.maps.Marker({ position: ubicacion, map });
   } catch (error) {
     const errEl = document.getElementById("map-error");
     if (errEl) errEl.innerText = "Error cargando Google Maps: " + error.message;
+    console.error(error);
   }
 }
+window.initMap = initMap; // necesario para callback=?initMap
 
-window.initMap = initMap;
-
-// =========================
-// IA (DINOSAURIOS)
-// =========================
+//////////////////////
+// IA DINOSAURIOS
+//////////////////////
 async function preguntarIA() {
-  const pregunta = document.getElementById("pregunta").value.trim();
+  const pregunta = document.getElementById("pregunta")?.value || "";
   const respuestaBox = document.getElementById("respuesta");
-
+  if (!respuestaBox) return;
   if (!pregunta) return;
   respuestaBox.innerText = "Cargando...";
-
   try {
     const res = await fetch(`${API_BASE}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pregunta }),
     });
-
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
     respuestaBox.innerText = data.respuesta || "Sin respuesta";
   } catch (error) {
     respuestaBox.innerText = "Error IA: " + error.message;
   }
 }
-
 window.preguntarIA = preguntarIA;
 
-// =========================
+//////////////////////
 // YOUTUBE
-// =========================
+//////////////////////
 async function cargarVideosYouTube() {
   const contenedor = document.getElementById("youtube-videos");
   const errorBox = document.getElementById("youtube-error");
-
+  if (!contenedor || !errorBox) return;
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando videos...";
-
   try {
     const res = await fetch(`${API_BASE}/youtube`);
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
     errorBox.innerText = "";
-
-    if (!data.items?.length) {
+    if (!data.items || data.items.length === 0) {
       errorBox.innerText = "No se encontraron videos.";
       return;
     }
-
     data.items.forEach((item) => {
-      if (item.id?.kind !== "youtube#video") return;
-
-      const vid = item.id.videoId;
-      const title = item.snippet?.title || "Video";
-
-      contenedor.innerHTML += `
-        <div class="video">
-          <iframe
-            width="300" height="170"
-            src="https://www.youtube.com/embed/${vid}"
-            title="${title}"
-            frameborder="0"
-            allowfullscreen
-          ></iframe>
-          <p>${title}</p>
-        </div>`;
+      if (item.id && item.id.kind === "youtube#video") {
+        const vid = item.id.videoId;
+        const title = item.snippet?.title || "Video";
+        contenedor.innerHTML += `
+          <div class="video">
+            <iframe
+              width="300" height="170"
+              src="https://www.youtube.com/embed/${vid}"
+              title="${title}"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen>
+            </iframe>
+            <p>${title}</p>
+          </div>
+        `;
+      }
     });
   } catch (err) {
     errorBox.innerText = "Error YouTube: " + err.message;
   }
 }
-
 window.cargarVideosYouTube = cargarVideosYouTube;
 
-// =========================
+//////////////////////
 // FACEBOOK
-// =========================
+//////////////////////
 function escapeHtml(s = "") {
-  return s.replace(/[&<>\"']/g, (c) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  }[c]));
+  return s.replace(/[&<>\"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
-
 async function cargarPostsFacebook() {
   const contenedor = document.getElementById("facebook-posts");
   const errorBox = document.getElementById("facebook-error");
-
+  if (!contenedor || !errorBox) return;
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando publicaciones...";
-
   try {
     const res = await fetch(`${API_BASE}/facebook`);
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
     errorBox.innerText = "";
-
-    if (!data.data?.length) {
+    if (!data.data || data.data.length === 0) {
       errorBox.innerText = "No se encontraron publicaciones.";
       return;
     }
-
     data.data.forEach((post) => {
+      const msg = post.message ? escapeHtml(post.message) : "[Sin mensaje]";
+      const link = post.permalink_url || "#";
       contenedor.innerHTML += `
         <div class="fb-post">
-          <p>${escapeHtml(post.message || "[Sin mensaje]")}</p>
-          <a href="${post.permalink_url}" target="_blank">Ver en Facebook</a>
-        </div>`;
+          <p>${msg}</p>
+          <a href="${link}" target="_blank" rel="noopener noreferrer">Ver en Facebook</a>
+        </div>
+      `;
     });
   } catch (err) {
     errorBox.innerText = "Error Facebook: " + err.message;
   }
 }
-
 window.cargarPostsFacebook = cargarPostsFacebook;
 
-// =========================
-// STREAMING + PLAYER
-// =========================
+//////////////////////
+// STREAMING (R2/S3) + PLAYER
+//////////////////////
 function getFileNameFromKey(key) {
-  return key?.split("/").pop() || "archivo";
+  try { return (key || "").split("/").pop() || key || "archivo"; }
+  catch { return key || "archivo"; }
 }
-
 function formatBytes(bytes) {
-  if (!bytes) return "";
-  const u = ["B", "KB", "MB", "GB"];
-  let i = 0;
-  while (bytes >= 1024 && i < u.length - 1) {
-    bytes /= 1024;
-    i++;
-  }
-  return `${bytes.toFixed(1)} ${u[i]}`;
+  if (bytes === undefined || bytes === null) return "";
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0, v = bytes;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return `${v.toFixed(v < 10 && i > 1 ? 1 : 0)} ${u[i]}`;
 }
-
 function setFeatured(videoObj) {
   const mainVideo = document.getElementById("main-video");
   const mainFilename = document.getElementById("main-filename");
   const mainExtra = document.getElementById("main-extra");
-
-  mainVideo.pause();
-  mainVideo.src = videoObj.url;
+  if (!mainVideo) return;
+  try { mainVideo.pause(); } catch {}
+  mainVideo.src = videoObj?.url || "";
   mainVideo.currentTime = 0;
+
+  // Mejor compatibilidad de autoplay (algunas plataformas requieren muted)
   mainVideo.muted = true;
   mainVideo.play().catch(() => {});
 
-  mainFilename.textContent = getFileNameFromKey(videoObj.key);
+  const name = getFileNameFromKey(videoObj?.key || "");
+  const size = formatBytes(videoObj?.size);
+  const fecha = videoObj?.lastModified ? new Date(videoObj.lastModified).toLocaleString() : "";
+  if (mainFilename) mainFilename.textContent = name || "Video";
+  if (mainExtra) mainExtra.textContent = `${size ? `Tamaño: ${size} · ` : ""}${fecha ? `Modificado: ${fecha}` : ""}`;
 
-  mainExtra.textContent =
-    `Tamaño: ${formatBytes(videoObj.size)} · ` +
-    new Date(videoObj.lastModified).toLocaleString();
-
-  document.querySelector(".player")?.scrollIntoView({ behavior: "smooth" });
+  document.querySelector(".player")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
 async function loadVideos(keepKey) {
   const grid = document.getElementById("videos-grid");
+  if (!grid) return;
   grid.innerHTML = "Cargando...";
-
   try {
-    const res = await fetch(`${API_BASE}/videos`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const r = await fetch(`${API_BASE}/videos`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
 
     grid.innerHTML = "";
-    const videos = data.videos;
-
-    if (!videos?.length) {
+    const videos = data.videos || [];
+    if (!videos.length) {
       grid.innerHTML = "<em>Sin videos</em>";
+      setFeatured({ url: "", key: "", size: 0, lastModified: null });
       return;
     }
 
     let featured = videos[0];
-    if (keepKey) featured = videos.find((v) => v.key === keepKey) || featured;
-
+    if (keepKey) {
+      const found = videos.find((v) => v.key === keepKey);
+      if (found) featured = found;
+    }
     setFeatured(featured);
 
     videos.forEach((v) => {
+      const fileName = getFileNameFromKey(v.key);
       const card = document.createElement("div");
       card.className = "video-card";
+      card.style.maxWidth = "360px";
+      card.title = v.key;
       card.innerHTML = `
         <div class="video-wrap">
-          <video class="hover-video" muted loop src="${v.url}"></video>
+          <video class="hover-video" muted loop playsinline preload="metadata" src="${v.url}"></video>
+          <div class="play-badge" aria-hidden="true">
+            <svg viewBox="0 0 100 100" fill="currentColor">
+              <circle cx="50" cy="50" r="44" opacity=".25"></circle>
+              <polygon points="40,30 75,50 40,70"></polygon>
+            </svg>
+          </div>
+          <div class="video-overlay">
+            <span class="video-filename">${fileName}</span>
+          </div>
         </div>
         <div class="video-meta">
-          <b>${getFileNameFromKey(v.key)}</b><br>
-          ${formatBytes(v.size)}
+          <div><b>Tamaño:</b> ${formatBytes(v.size)}</div>
+          <div><b>Modificado:</b> ${v.lastModified ? new Date(v.lastModified).toLocaleString() : ""}</div>
         </div>
       `;
-
-      card.addEventListener("click", () => setFeatured(v));
+      const thumb = card.querySelector(".hover-video");
+      if (thumb) {
+        card.addEventListener("mouseenter", () => {
+          thumb.currentTime = 0;
+          const p = thumb.play();
+          if (p && typeof p.catch === "function") p.catch(() => {});
+        });
+        card.addEventListener("mouseleave", () => {
+          thumb.pause();
+          thumb.currentTime = 0;
+        });
+      }
+      card.addEventListener("click", async () => {
+        setFeatured(v);
+        try {
+          const head = await fetch(v.url, { method: "HEAD" });
+          if (!head.ok) throw new Error(String(head.status));
+        } catch {
+          await loadVideos(v.key); // si expiró la URL firmada, recarga lista
+        }
+      });
       grid.appendChild(card);
     });
-  } catch (err) {
+  } catch (e) {
     grid.innerHTML = "Error al cargar videos";
+    console.error(e);
   }
 }
-
-// =========================
-// SUBIR VIDEOS
-// =========================
 async function handleUpload(e) {
   e.preventDefault();
-
   const status = document.getElementById("upload-status");
   const input = document.getElementById("video");
-  const file = input.files[0];
-
-  status.textContent = "Subiendo...";
-
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (status) status.textContent = "Subiendo...";
   try {
     const fd = new FormData();
     fd.append("video", file);
-
-    const res = await fetch(`${API_BASE}/upload`, {
-      method: "POST",
-      body: fd,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error);
-
-    status.textContent = "✔ Subido";
-    loadVideos();
-    input.value = "";
+    const r = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error de subida");
+    if (status) status.textContent = "✓ Subido";
+    await loadVideos();
   } catch (err) {
-    status.textContent = "Error: " + err.message;
+    if (status) status.textContent = "Error: " + err.message;
+  } finally {
+    setTimeout(() => status && (status.textContent = ""), 3000);
+    if (input) input.value = "";
   }
 }
 
-// =========================
-// STRIPE
-// =========================
+//////////////////////
+// PAGOS (Stripe Checkout)
+//////////////////////
 async function pagar() {
-  const email = document.getElementById("buyerEmail").value.trim();
-  if (!email) return alert("Ingresa tu correo.");
-
   try {
-    const res = await fetch(`${API_BASE}/crear-pago`, {
+    const emailInput = document.getElementById("buyerEmail");
+    const buyerEmail = (emailInput?.value || "").trim();
+    if (!buyerEmail) {
+      alert("Ingresa tu correo para enviarte el ticket.");
+      emailInput?.focus();
+      return;
+    }
+    const items = [{ name: "Donación ARK", qty: 1, price: 12.0 }];
+
+    const res = await fetch(`${window.location.origin}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        buyerEmail: email,
-        items: [{ name: "Donación ARK", qty: 1, price: 12 }],
-      }),
+      body: JSON.stringify({ buyerEmail, items }),
     });
-
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status} ${txt}`);
+    }
     const data = await res.json();
-
-    if (data.url) window.location.href = data.url;
-    else alert("Error al iniciar pago");
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      alert("No se pudo iniciar el pago (sin URL de Stripe)");
+    }
   } catch (e) {
-    alert("Error: " + e.message);
+    alert("Error al iniciar pago: " + e.message);
+    console.error("❌ /crear-pago error:", e);
   }
 }
+window.pagar = pagar; // por el onclick del HTML
 
-window.pagar = pagar;
-
-// =========================
-// MAPBOX 3D — FIX APLICADO
-// =========================
+//////////////////////
+// MAPBOX 3D — Token desde backend + modo caminar
+//////////////////////
 let MAPBOX_TOKEN = "";
 
+/** Carga token público (pk_) desde /config/mapbox e inicia el mapa 3D */
 async function loadMapboxTokenAndInit() {
   const err = document.getElementById("map3d-error");
-
   try {
-    const res = await fetch(`${API_BASE}/config/mapbox`);
-    const { mapboxToken, error } = await res.json();
-
-    if (!mapboxToken) throw new Error(error || "Token ausente");
-    if (!window.mapboxgl)
-      throw new Error("Mapbox GL JS no cargado (revisa el script)");
-
+    const r = await fetch(`${API_BASE}/config/mapbox`, { cache: "no-store" });
+    const { mapboxToken, error } = await r.json();
+    if (!r.ok || !mapboxToken || error) throw new Error(error || "MAPBOX_PUBLIC_TOKEN ausente.");
+    if (!window.mapboxgl) throw new Error("Mapbox GL JS no cargado (revisa el <script> en Index.html).");
     MAPBOX_TOKEN = mapboxToken;
     initMap3DWalk();
   } catch (e) {
-    err.textContent = "Mapbox falló: " + e.message;
+    if (err) err.textContent = "Mapbox no inicializó: " + e.message;
+    console.error(e);
   }
 }
 
+/** Inicializa Mapbox con terreno, edificios 3D y free camera para caminar */
 function initMap3DWalk() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
+
+  const el = document.getElementById("map3d");
+  const errBox = document.getElementById("map3d-error");
+  if (!el) return;
 
   const map = new mapboxgl.Map({
     container: "map3d",
     style: "mapbox://styles/mapbox/streets-v12",
-    center: [-99.1332, 19.4326],
+    center: [-99.1332, 19.4326], // CDMX
     zoom: 16,
     pitch: 60,
     bearing: 40,
-    antialias: true,
+    antialias: true
   });
 
-  map.addControl(new mapboxgl.NavigationControl());
+  map.addControl(new mapboxgl.NavigationControl(), "top-right");
+  map.addControl(new mapboxgl.FullscreenControl());
+
+  // Ayuda visual (instrucciones)
+  const hint = document.createElement("div");
+  Object.assign(hint.style, {
+    position: "absolute", right: "10px", bottom: "10px",
+    background: "rgba(0,0,0,.55)", color: "#fff",
+    padding: "8px 10px", borderRadius: "8px",
+    fontSize: "12px", pointerEvents: "none"
+  });
+  hint.textContent = "Click para capturar mouse • W/A/S/D = mover • Ratón = mirar • Q/E = subir/bajar • Shift = sprint • Esc = liberar";
+  el.appendChild(hint);
 
   map.on("style.load", () => {
+    map.setFog({ range: [0.5, 10], color: "#d6e5fb", "horizon-blend": 0.02 });
+
+    // Terreno (DEM)
     map.addSource("mapbox-dem", {
       type: "raster-dem",
       url: "mapbox://mapbox.mapbox-terrain-dem-v1",
       tileSize: 512,
+      maxzoom: 14
+    });
+    map.setTerrain({ source: "mapbox-dem", exaggeration: 1.3 });
+
+    // Edificios 3D
+    map.addLayer({
+      id: "3d-buildings",
+      source: "composite",
+      "source-layer": "building",
+      filter: ["==", "extrude", "true"],
+      type: "fill-extrusion",
+      minzoom: 15,
+      paint: {
+        "fill-extrusion-color": "#aaa",
+        "fill-extrusion-height": ["get", "height"],
+        "fill-extrusion-base": ["get", "min_height"],
+        "fill-extrusion-opacity": 0.6
+      }
     });
 
-    map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
-
-    setupFirstPerson(map);
+    // Activar modo caminar
+    setupFirstPerson(map, el);
   });
 }
 
-// =========================
-// FREECAMERA FIX
-// =========================
-function setupFirstPerson(map) {
-  let pos = { lng: -99.1332, lat: 19.4326, alt: 20 };
-  let yaw = 0, pitch = 0;
+/** Lógica de “first‑person walking” usando FreeCamera */
+function setupFirstPerson(map, containerEl) {
+  let pos = { lng: map.getCenter().lng, lat: map.getCenter().lat, alt: 20 };
+  let yaw = map.getBearing() * Math.PI / 180;
+  let pitch = -10 * Math.PI / 180;
+  let speed = 3.0;           // m/s
+  const sprint = 2.0;        // multiplicador con Shift
+  const deg = Math.PI / 180;
+  const EARTH_R = 6378137;
   const keys = new Set();
-  let last = performance.now();
+  let pointerLocked = false;
+  let lastTs = performance.now();
 
+  // Pointer Lock para controlar la vista con el ratón
+  containerEl.addEventListener("click", () => {
+    containerEl.requestPointerLock?.();
+  });
+  document.addEventListener("pointerlockchange", () => {
+    pointerLocked = (document.pointerLockElement === containerEl);
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!pointerLocked) return;
+    const sens = 0.0025;
+    yaw   -= e.movementX * sens;
+    pitch -= e.movementY * sens;
+    const maxPitch = 85 * deg;
+    if (pitch >  maxPitch) pitch =  maxPitch;
+    if (pitch < -maxPitch) pitch = -maxPitch;
+  });
+
+  // Teclado: W/A/S/D, Q/E, Shift
   window.addEventListener("keydown", (e) => keys.add(e.code));
-  window.addEventListener("keyup", (e) => keys.delete(e.code));
+  window.addEventListener("keyup",   (e) => keys.delete(e.code));
 
-  function tick(ts) {
-    const dt = Math.min((ts - last) / 1000, 0.05);
-    last = ts;
+  function step(dt) {
+    // Dirección horizontal (yaw)
+    const forwardX =  Math.cos(yaw);
+    const forwardY =  Math.sin(yaw);
+    const rightX   = -Math.sin(yaw);
+    const rightY   =  Math.cos(yaw);
 
-    const speed = 10 * dt;
+    let v = speed * (keys.has("ShiftLeft") || keys.has("ShiftRight") ? sprint : 1.0);
+    let dx = 0, dy = 0, dz = 0;
 
-    if (keys.has("KeyW")) pos.lat += speed * 0.0001;
-    if (keys.has("KeyS")) pos.lat -= speed * 0.0001;
-    if (keys.has("KeyA")) pos.lng -= speed * 0.0001;
-    if (keys.has("KeyD")) pos.lng += speed * 0.0001;
+    if (keys.has("KeyW")) { dx += forwardX * v * dt; dy += forwardY * v * dt; }
+    if (keys.has("KeyS")) { dx -= forwardX * v * dt; dy -= forwardY * v * dt; }
+    if (keys.has("KeyA")) { dx -= rightX   * v * dt; dy -= rightY   * v * dt; }
+    if (keys.has("KeyD")) { dx += rightX   * v * dt; dy += rightY   * v * dt; }
+    if (keys.has("KeyQ")) { dz += v * dt; }
+    if (keys.has("KeyE")) { dz -= v * dt; }
 
-    const mc = mapboxgl.MercatorCoordinate.fromLngLat(
-      [pos.lng, pos.lat],
-      pos.alt
-    );
+    // Convertir dx (este), dy (norte) en delta lat/lng (aprox local)
+    const dLat = (dy / EARTH_R) * (180 / Math.PI);
+    const dLng = (dx / (EARTH_R * Math.cos(pos.lat * deg))) * (180 / Math.PI);
+
+    pos.lat = clamp(pos.lat + dLat, -85, 85);
+    pos.lng = wrapLng(pos.lng + dLng);
+    pos.alt = Math.max(1, pos.alt + dz);
+
+    // Punto de enfoque adelante
+    const forwardMeters = 10;
+    const fx = Math.cos(pitch) * Math.cos(yaw);
+    const fy = Math.cos(pitch) * Math.sin(yaw);
+
+    const targetLat = pos.lat + (forwardMeters * fy / EARTH_R) * (180 / Math.PI);
+    const targetLng = pos.lng + (forwardMeters * fx / (EARTH_R * Math.cos(pos.lat * deg))) * (180 / Math.PI);
+    const target = [targetLng, targetLat];
 
     const cam = map.getFreeCameraOptions();
-    cam.position = [mc.x, mc.y, mc.z]; // ← FIX IMPORTANTE
-
-    cam.lookAtPoint([pos.lng, pos.lat]);
+    const mc = mapboxgl.MercatorCoordinate.fromLngLat([pos.lng, pos.lat], pos.alt);
+    cam.position = mc.toVector3();
+    cam.lookAtPoint(target);
     map.setFreeCameraOptions(cam);
-
-    requestAnimationFrame(tick);
   }
 
-  tick(last);
+  function animate(ts) {
+    const dt = Math.min(0.05, (ts - lastTs) / 1000); // limitar a 50ms para suavidad
+    lastTs = ts;
+    step(dt);
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
+  // Helpers
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function wrapLng(lng) {
+    while (lng >  180) lng -= 360;
+    while (lng < -180) lng += 360;
+    return lng;
+  }
 }
 
-// =========================
+//////////////////////
 // INIT
-// =========================
+//////////////////////
 document.addEventListener("DOMContentLoaded", () => {
+  // Upload/lista
   document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
   document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
+
+  // Atajo player: barra espaciadora play/pause
+  const mainVideo = document.getElementById("main-video");
+  document.addEventListener("keydown", (e) => {
+    if (!mainVideo) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (mainVideo.paused) mainVideo.play().catch(() => {});
+      else mainVideo.pause();
+    }
+  });
+
+  // Carga inicial de videos
   loadVideos();
+
+  // Mapbox: obtener token desde backend e iniciar
   loadMapboxTokenAndInit();
 });
