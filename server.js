@@ -322,10 +322,6 @@ app.get("/videos", async (_req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-// ==========================
-// PUERTO
-// ==========================
 // ========= 2FA DINÁMICO (SendGrid) =========
 
 let codigoTemporal = null;
@@ -370,6 +366,10 @@ app.post("/verificar-codigo", (req, res) => {
 
   res.status(400).json({ error: "Código incorrecto" });
 });
+// ==========================
+// PUERTO
+// ==========================
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en http://localhost:${PORT}`);
