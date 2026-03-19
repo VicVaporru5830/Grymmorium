@@ -326,6 +326,50 @@ app.get("/videos", async (_req, res) => {
 // ==========================
 // PUERTO
 // ==========================
+// ========= 2FA DINÁMICO (SendGrid) =========
+
+let codigoTemporal = null;
+let codigoExpira = null;
+let correoObjetivo = null;
+
+app.post("/enviar-codigo", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ error: "Falta correo" });
+
+    // Generar código 6 dígitos
+    codigoTemporal = Math.floor(100000 + Math.random() * 900000).toString();
+    codigoExpira = Date.now() + 5 * 60 * 1000; // dura 5 min
+    correoObjetivo = email;
+
+    const { sendVerificationCode } = require("./mailer");
+    await sendVerificationCode(email, codigoTemporal);
+
+    res.json({ ok: true, msg: "Código enviado" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/verificar-codigo", (req, res) => {
+  const { codigo } = req.body;
+
+  if (!codigoTemporal)
+    return res.status(400).json({ error: "No se ha generado un código" });
+
+  if (Date.now() > codigoExpira)
+    return res.status(400).json({ error: "Código expirado" });
+
+  if (codigo === codigoTemporal) {
+    codigoTemporal = null;
+    codigoExpira = null;
+    correoObjetivo = null;
+    return res.json({ ok: true, msg: "Verificación correcta" });
+  }
+
+  res.status(400).json({ error: "Código incorrecto" });
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en http://localhost:${PORT}`);

@@ -2,6 +2,9 @@
 const sg = require("@sendgrid/mail");
 const { generateReceiptPDF } = require("./pdf");
 
+// ===============================
+// CONFIG SENDGRID
+// ===============================
 if (!process.env.SENDGRID_API_KEY) {
   console.warn("⚠️  SENDGRID_API_KEY no está definida. No se enviarán correos.");
 } else {
@@ -12,6 +15,9 @@ function asPercent(n) {
   return `${Math.round((Number(n || 0)) * 100)}%`;
 }
 
+// ===============================
+// ENVÍO DEL TICKET DE COMPRA (ORIGINAL, NO MODIFICADO)
+// ===============================
 async function sendReceiptEmail({ session, lineItems }) {
   const buyer =
     session?.customer_details?.email ||
@@ -45,10 +51,9 @@ async function sendReceiptEmail({ session, lineItems }) {
     });
   } catch (e) {
     console.error("❌ Error generando PDF:", e);
-    // Continuamos sin PDF para no bloquear el correo
   }
 
-  // HTML plano del cuerpo
+  // HTML, texto y adjuntos
   const amount = ((session?.amount_total || 0) / 100).toFixed(2);
   const currency = (session?.currency || "mxn").toUpperCase();
   const itemsHtml = (lineItems || [])
@@ -65,17 +70,15 @@ async function sendReceiptEmail({ session, lineItems }) {
     <p>Adjuntamos tu ticket en PDF con desglose de IVA.</p>
   `;
 
-  const text =
-    [
-      "Gracias por tu compra",
-      `Total cobrado (Stripe): ${amount} ${currency}`,
-      "Detalles:",
-      ...(lineItems || []).map(i => `- ${(i.quantity || 1)} × ${(i.description || "Artículo")} — ${((i.amount_total || 0)/100).toFixed(2)} ${currency}`),
-      `Folio Stripe: ${session?.id}`,
-      `IVA aplicado en PDF: ${asPercent(ivaRate)}`
-    ].join("\n");
+  const text = [
+    "Gracias por tu compra",
+    `Total cobrado (Stripe): ${amount} ${currency}`,
+    "Detalles:",
+    ...(lineItems || []).map(i => `- ${(i.quantity || 1)} × ${(i.description || "Artículo")} — ${((i.amount_total || 0)/100).toFixed(2)} ${currency}`),
+    `Folio Stripe: ${session?.id}`,
+    `IVA aplicado en PDF: ${asPercent(ivaRate)}`
+  ].join("\n");
 
-  // Armar attachments
   const attachments = [];
   if (pdfBuffer) {
     attachments.push({
@@ -89,7 +92,7 @@ async function sendReceiptEmail({ session, lineItems }) {
   // Enviar al comprador
   try {
     if (!process.env.MAIL_FROM) {
-      throw new Error("MAIL_FROM no está configurado en .env (debe ser un sender verificado en SendGrid).");
+      throw new Error("MAIL_FROM no está configurado en .env (debe ser sender verificado en SendGrid).");
     }
 
     const [resp] = await sg.send({
@@ -101,12 +104,12 @@ async function sendReceiptEmail({ session, lineItems }) {
       attachments
     });
 
-    console.log("📧 Ticket (con PDF) enviado →", buyer, "| SendGrid:", resp?.statusCode);
+    console.log("📧 Ticket enviado →", buyer, "| SendGrid:", resp?.statusCode);
   } catch (err) {
     console.error("❌ SendGrid error (comprador):", err?.response?.body || err?.message || err);
   }
 
-  // Copia al vendedor (opcional)
+  // Copia al vendedor
   if (process.env.SELLER_EMAIL) {
     try {
       const [copy] = await sg.send({
@@ -117,11 +120,46 @@ async function sendReceiptEmail({ session, lineItems }) {
         text,
         attachments
       });
-      console.log("📨 Copia a vendedor OK →", process.env.SELLER_EMAIL, "| SendGrid:", copy?.statusCode);
+      console.log("📨 Copia vendedor OK →", process.env.SELLER_EMAIL, "| SendGrid:", copy?.statusCode);
     } catch (err) {
       console.error("❌ SendGrid error (vendedor):", err?.response?.body || err?.message || err);
     }
   }
 }
 
-module.exports = { sendReceiptEmail };
+// ===============================
+// 2FA — ENVÍO DEL CÓDIGO POR EMAIL
+// ===============================
+async function sendVerificationCode(email, code) {
+  if (!process.env.MAIL_FROM) {
+    throw new Error("MAIL_FROM no está configurado en .env");
+  }
+
+  const html = `
+    <h2>Tu código de verificación</h2>
+    <p>Este es tu código para verificar tu identidad:</p>
+    <h1>${code}</h1>
+    <p>Es válido por 5 minutos.</p>
+  `;
+
+  const text = `Tu código de verificación es: ${code}`;
+
+  try {
+    const [resp] = await sg.send({
+      to: email,
+      from: process.env.MAIL_FROM,
+      subject: "🔐 Tu código de verificación ARK",
+      html,
+      text
+    });
+
+    console.log("📩 Código 2FA enviado →", email, "| SendGrid:", resp?.statusCode);
+  } catch (err) {
+    console.error("❌ Error enviando código 2FA:", err?.response?.body || err?.message || err);
+  }
+}
+
+module.exports = {
+  sendReceiptEmail,
+  sendVerificationCode
+};

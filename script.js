@@ -14,21 +14,49 @@ const API_BASE = window.location.origin;
 //////////////////////
 // 2FA SIMPLE
 //////////////////////
-const codigoCorrecto = "123456";
-function verificarCodigo() {
-  const codigo = document.getElementById("codigo")?.value || "";
+async function enviarCodigo() {
+  const email = prompt("Ingresa tu correo para enviarte el código:");
+
+  if (!email) return alert("Debes ingresar un correo.");
+
+  const r = await fetch(`${API_BASE}/enviar-codigo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await r.json();
+
+  if (!r.ok) return alert("Error: " + data.error);
+
+  alert("Código enviado a tu correo.");
+}
+
+async function verificarCodigo() {
+  const codigo = document.getElementById("codigo").value;
   const msg = document.getElementById("verificacion-msg");
-  if (!msg) return;
-  if (codigo === codigoCorrecto) {
-    msg.innerText = "Verificación correcta ✅";
+
+  msg.innerText = "Verificando...";
+
+  const r = await fetch(`${API_BASE}/verificar-codigo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ codigo })
+  });
+
+  const data = await r.json();
+
+  if (r.ok) {
     msg.style.color = "green";
+    msg.innerText = "Código correcto ✔️";
   } else {
-    msg.innerText = "Código incorrecto ❌";
     msg.style.color = "red";
+    msg.innerText = data.error;
   }
 }
-window.verificarCodigo = verificarCodigo;
 
+window.enviarCodigo = enviarCodigo;
+window.verificarCodigo = verificarCodigo;
 //////////////////////
 // GOOGLE MAPS (2D)
 //////////////////////
