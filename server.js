@@ -85,7 +85,7 @@ app.get("/", (req, res) => {
 });
 
 // =========================================
-//  IA (DINOSAURIOS) — FIX DEFINITIVO
+// IA (DINOSAURIOS) — FIX CON ROUTER API
 // =========================================
 app.post("/chat", async (req, res) => {
   try {
@@ -97,18 +97,25 @@ app.post("/chat", async (req, res) => {
     if (!process.env.HF_API_KEY)
       return res.status(500).json({ error: "Falta HF_API_KEY" });
 
-    // IA optimizada SOLO para DINOSAURIOS
-    const prompt = `
-Eres un experto en dinosaurios. 
-Responde de forma clara, educativa y precisa.
+    // Prompt para tema dinosaurios
+    const systemPrompt = `
+Eres un paleontólogo experto en dinosaurios.
+Responde SIEMPRE con precisión científica, claridad y de forma educativa.
+No hables de nada fuera del tema dinosaurios.
+    `;
 
-Pregunta del usuario:
-${pregunta}
-`;
-
-    const respuestaHF = await axios.post(
-      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
-      { inputs: prompt },
+    // Router API NUEVO (funciona en FREE)
+    const resp = await axios.post(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        model: "google/gemma-7b-it",  // ✔ MODELO GRATIS, FUNCIONAL
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: pregunta }
+        ],
+        max_tokens: 300,
+        temperature: 0.6
+      },
       {
         headers: {
           Authorization: `Bearer ${process.env.HF_API_KEY}`,
@@ -118,14 +125,16 @@ ${pregunta}
     );
 
     const respuesta =
-      respuestaHF.data?.[0]?.generated_text ||
+      resp.data?.choices?.[0]?.message?.content?.trim() ||
       "No pude generar una respuesta.";
 
     res.json({ respuesta });
 
   } catch (error) {
-    console.error("🔥 ERROR IA:", error.response?.data || error.message);
-    res.status(500).json({ error: "Error interno al procesar IA" });
+    console.error("🔥 ERROR IA (Router):", error.response?.data || error.message);
+    res.status(500).json({
+      error: "Error interno al procesar IA"
+    });
   }
 });
 
