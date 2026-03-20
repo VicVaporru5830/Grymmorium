@@ -15,6 +15,7 @@ const { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } =
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
 const mime = require("mime-types");
+const { sendReceiptEmail, sendVerificationCode } = require("./mailer");
 
 // Stripe
 const Stripe = require("stripe");
@@ -90,7 +91,7 @@ app.get("/", (req, res) => {
 });
 
 // =========================================
-// IA (DINOSAURIOS) — Router API (MODELO FUNCIONAL)
+// IA — Router API (MODELO FUNCIONAL)
 // =========================================
 app.post("/chat", async (req, res) => {
   try {
@@ -204,6 +205,47 @@ app.get("/facebook", async (_req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// =========================================
+// 2FA — VERIFICACIÓN EN DOS PASOS
+// =========================================
+let codes = {};
+
+app.post("/send-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Falta email" });
+
+    const code = Math.floor(100000 + Math.random() * 900000);
+    codes[email] = { code, expires: Date.now() + 5 * 60 * 1000 };
+
+    await sendVerificationCode(email, code);
+
+    res.json({ ok: true, msg: "Código enviado" });
+  } catch (err) {
+    console.error("Error en /send-code:", err.message);
+    res.status(500).json({ error: "No se pudo enviar el código" });
+  }
+});
+
+app.post("/verify-code", (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) return res.status(400).json({ error: "Faltan datos" });
+
+  const record = codes[email];
+  if (!record) return res.status(400).json({ error: "No se envió código" });
+
+  if (Date.now() > record.expires) {
+    return res.status(400).json({ error: "Código expirado" });
+  }
+
+  if (String(record.code) !== String(code)) {
+    return res.status(400).json({ error: "Código incorrecto" });
+  }
+
+  delete codes[email];
+  res.json({ ok: true, msg: "Verificación correcta" });
 });
 
 // =========================================
