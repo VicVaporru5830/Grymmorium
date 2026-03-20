@@ -121,6 +121,12 @@ input:focus {
   box-shadow: 0 0 10px rgba(77,166,255,0.4);
 }
 
+.error {
+  color: #ff4a4a;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
 /* ==========================================================
    MAPAS Y SECCIONES
    ========================================================== */
@@ -141,4 +147,53 @@ input:focus {
 .player {
   background: #0a1a2f;
   border-radius: 14px;
+  border: 2px solid #4da6ff;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: 0 0 24px rgba(77,166,255,0.45);
+}
+
+.player-wrap {
+  position: relative;
+}
+
+.player video {
+  width: 100%;
+  border-radius: 14px 14px 0 0;
+}
+
+.player-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  color: #e6f7ff;
+  text-shadow: 0 0 8px rgba(77,166,255,0.8);
+}
+
+.player-meta {
+  padding: 10px;
+  font-size: 14px;
+  color: #b3d9ff;
+}
+
+/* ==========================================================
+   SECCIONES CENTRADAS
+   ========================================================== */
+.center-text {
+  text-align: center;
+  margin: 0 0 10px;
+}
+
+.center-buttons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+@media (max-width: 600px) {
+  #map3d { height: 300px; }
+  button { width: 100%; }
 }

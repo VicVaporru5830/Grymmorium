@@ -108,7 +108,6 @@ Eres un alquimista ancestral con 20 años de experiencia en artes arcanas.
 Respondes únicamente acerca de pociones mágicas, fórmulas alquímicas y encantamientos.
 Siempre usas un tono místico, preciso y educativo, describiendo ingredientes, rituales y efectos.
 NO hablas de ningún otro tema.
-
     `;
 
     // ✔ Modelo que sí está soportado por router.huggingface.co
@@ -170,7 +169,7 @@ app.get("/youtube", async (_req, res) => {
     const r = await axios.get("https://www.googleapis.com/youtube/v3/search", {
       params: {
         part: "snippet",
-        q: "Animales prehistóricos documentales",
+        q: "Pociones y encantamientos",
         type: "video",
         maxResults: 6,
         key: process.env.YOUTUBE_API_KEY,
