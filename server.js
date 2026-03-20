@@ -169,7 +169,7 @@ app.get("/youtube", async (_req, res) => {
     const r = await axios.get("https://www.googleapis.com/youtube/v3/search", {
       params: {
         part: "snippet",
-        q: "Pociones y encantamientos",
+        q: "Pociones y encantamientos de hogwarts legacy",
         type: "video",
         maxResults: 6,
         key: process.env.YOUTUBE_API_KEY,
