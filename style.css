@@ -5,17 +5,17 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: url('Magical Blue Background.png') no-repeat center center fixed;
+  background: url('Monster Hunter World.png') no-repeat center center fixed;
   background-size: cover;
   min-height: 100vh;
   position: relative;
 }
 
-/* Capa luminosa */
+/* Capa oscura */
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(10,30,60,0.55);
+  background-color: rgba(0,0,0,0.55);
   z-index: 0;
 }
 
@@ -25,17 +25,14 @@ body {
 .container {
   position: relative;
   z-index: 1;
-  background: url('Bluetarot.png') no-repeat center center fixed;
-  background-size: cover;
-  background-attachment: fixed;
-  background-position: center;
+  background: rgba(255, 245, 245, 0.92);
   max-width: 760px;
   width: 92%;
   margin: 40px auto;
   padding: 35px;
   border-radius: 18px;
-  border: 2px solid #0a3c5e;
-  box-shadow: 0 10px 25px rgba(0,0,50,0.35);
+  border: 2px solid #5e0a18;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
 }
 
 /* ==========================================================
@@ -43,11 +40,10 @@ body {
    ========================================================== */
 h1, h2 {
   text-align: center;
-  color: #0a3c5e;
+  color: #5e0a18;
   font-weight: 700;
   letter-spacing: .3px;
   margin-top: 8px;
-  text-shadow: 0 2px 6px rgba(0,0,50,0.4);
 }
 
 /* ==========================================================
@@ -57,7 +53,7 @@ button {
   padding: 12px 14px;
   border: none;
   border-radius: 10px;
-  background-color: #1a5ea8;
+  background-color: #7a1026;
   color: #fff;
   font-size: 16px;
   cursor: pointer;
@@ -66,7 +62,7 @@ button {
 }
 
 button:hover {
-  background-color: #0a3c5e;
+  background-color: #4e0a18;
   transform: translateY(-1px);
 }
 
@@ -77,7 +73,7 @@ button[onclick="pagar()"] {
   padding: 14px;
   border-radius: 14px;
   margin-top: 10px;
-  box-shadow: 0 6px 16px rgba(0,0,50,0.25);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.20);
 }
 
 /* ==========================================================
@@ -89,17 +85,17 @@ input[type="file"] {
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  border: 2px solid #5ea3d9;
+  border: 2px solid #b37b85;
   margin: 7px 0 10px;
   font-size: 16px;
-  background: #f0f8ff;
-  color: #0a2c4e;
+  background: #fff7f7;
+  color: #3b0c13;
 }
 
 input:focus {
   outline: none;
-  border-color: #1a5ea8;
-  box-shadow: 0 0 8px rgba(26,94,168,0.45);
+  border-color: #7a1026;
+  box-shadow: 0 0 8px rgba(122,16,38,0.35);
 }
 
 /* ==========================================================
@@ -111,10 +107,10 @@ input:focus {
   margin-top: 10px;
   padding: 12px;
   border-radius: 10px;
-  background-color: #e6f2ff;
-  border-left: 5px solid #1a5ea8;
+  background-color: #fff2f2;
+  border-left: 5px solid #7a1026;
   min-height: 40px;
-  color: #0a2c4e;
+  color: #330610;
 }
 
 /* ==========================================================
@@ -125,7 +121,7 @@ input:focus {
   width: 100%;
   height: 300px;
   border-radius: 15px;
-  border: 3px solid #1a5ea8;
+  border: 3px solid #7a1026;
 }
 
 /* ==========================================================
@@ -135,11 +131,11 @@ input:focus {
   width: 100%;
   height: 400px;
   border-radius: 15px;
-  border: 3px solid #1a5ea8;
+  border: 3px solid #7a1026;
   margin-top: 15px;
   margin-bottom: 10px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,50,0.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
 /* ==========================================================
@@ -159,8 +155,8 @@ input:focus {
   background: #ffffff;
   padding: 10px;
   border-radius: 12px;
-  border-left: 5px solid #1a5ea8;
-  box-shadow: 0 5px 15px rgba(0,0,50,0.18);
+  border-left: 5px solid #7a1026;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.13);
   max-width: 300px;
 }
 
@@ -170,10 +166,10 @@ input:focus {
 .player {
   background: #000;
   border-radius: 14px;
-  border: 2px solid #1a5ea8;
+  border: 2px solid #7a1026;
   overflow: hidden;
   margin-bottom: 18px;
-  box-shadow: 0 8px 24px rgba(0,0,50,0.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
 .player-wrap {
@@ -196,18 +192,18 @@ input:focus {
   top: 0;
   right: 0;
   padding: 10px 12px;
-  background: linear-gradient(to bottom, rgba(0,0,50,0.65), rgba(0,0,0,0));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
   color: #fff;
 }
 
 #main-filename {
   font-weight: 700;
-  text-shadow: 0 2px 6px rgba(0,0,50,.6);
+  text-shadow: 0 2px 6px rgba(0,0,0,.6);
 }
 
 .player-meta {
   background: #111;
-  color: #cce6ff;
+  color: #ddd;
   padding: 10px 12px;
   font-size: 13px;
 }
@@ -225,15 +221,15 @@ input:focus {
 .video-card {
   background: #fff;
   border-radius: 12px;
-  border-left: 5px solid #1a5ea8;
-  box-shadow: 0 6px 16px rgba(0,0,50,0.18);
+  border-left: 5px solid #7a1026;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
   transition: 0.2s ease;
   cursor: pointer;
 }
 
 .video-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0,0,50,0.25);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
 }
 
 .video-wrap {
@@ -255,7 +251,7 @@ input:focus {
   right: 0;
   bottom: 0;
   padding: 10px 12px;
-  background: linear-gradient(to top, rgba(0,0,50,0.65), rgba(0,0,0,0));
+  background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0));
   color: #fff;
   opacity: 0;
   transform: translateY(10px);
@@ -280,7 +276,7 @@ input:focus {
 .play-badge svg {
   width: 54px;
   height: 54px;
-  filter: drop-shadow(0 4px 12px rgba(0,0,50,.45));
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
 }
 
 .video-card:hover .play-badge {
