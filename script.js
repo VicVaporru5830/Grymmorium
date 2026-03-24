@@ -107,72 +107,85 @@ function initMap() {
 }
 window.initMap = initMap;
 
-//////////////////////
-// IA DINOSAURIOS
-//////////////////////
-async function preguntarIA() {
-  const pregunta = document.getElementById("pregunta")?.value || "";
-  const respuestaBox = document.getElementById("respuesta");
-  if (!respuestaBox) return;
-  if (!pregunta) return;
-  respuestaBox.innerText = "Cargando...";
+// =========================================================
+// IA (MAGIA)
+// =========================================================
+app.post("/chat", async (req, res) => {
   try {
-    const res = await fetch(`${API_BASE}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pregunta }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error desconocido");
-    respuestaBox.innerText = data.respuesta || "Sin respuesta";
-  } catch (error) {
-    respuestaBox.innerText = "Error IA: " + error.message;
-  }
-}
-window.preguntarIA = preguntarIA;
+    const { pregunta } = req.body;
 
-//////////////////////
-// YOUTUBE
-//////////////////////
-async function cargarVideosYouTube() {
-  const contenedor = document.getElementById("youtube-videos");
-  const errorBox = document.getElementById("youtube-error");
-  if (!contenedor || !errorBox) return;
-  contenedor.innerHTML = "";
-  errorBox.innerText = "Cargando videos...";
-  try {
-    const res = await fetch(`${API_BASE}/youtube`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error desconocido");
-    errorBox.innerText = "";
-    if (!data.items || data.items.length === 0) {
-      errorBox.innerText = "No se encontraron videos.";
-      return;
-    }
-    data.items.forEach((item) => {
-      if (item.id && item.id.kind === "youtube#video") {
-        const vid = item.id.videoId;
-        const title = item.snippet?.title || "Video";
-        contenedor.innerHTML += `
-          <div class="video">
-            <iframe
-              width="300" height="170"
-              src="https://www.youtube.com/embed/${vid}"
-              title="${title}"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen>
-            </iframe>
-            <p>${title}</p>
-          </div>
-        `;
+    if (!pregunta)
+      return res.status(400).json({ error: "Falta pregunta" });
+
+    if (!process.env.HF_API_KEY)
+      return res.status(500).json({ error: "Falta HF_API_KEY" });
+
+    const systemPrompt = `
+Eres un archimago ancestral con inmenso conocimiento sobre hechicería,
+conjuros, rituales, artefactos místicos, bestias mágicas,
+energías arcanas, runas, alquimia y sabiduría esotérica.
+
+Responde SIEMPRE con tono sabio y mágico.
+No hables de dinosaurios ni temas mundanos.
+Explica los conceptos como si enseñaras a un aprendiz de magia.
+    `;
+
+    const resp = await axios.post(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        model: "meta-llama/Llama-3.2-1B-Instruct",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: pregunta }
+        ],
+        max_tokens: 250,
+        temperature: 0.5
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": "application/json"
+        }
       }
-    });
-  } catch (err) {
-    errorBox.innerText = "Error YouTube: " + err.message;
+    );
+
+    const respuesta =
+      resp.data?.choices?.[0]?.message?.content?.trim() ||
+      "No pude generar respuesta.";
+
+    res.json({ respuesta });
+  } catch (error) {
+    console.error("🔥 ERROR IA:", error.response?.data || error.message);
+    res.status(500).json({ error: "Error interno al procesar IA" });
   }
-}
+});
+
+// =========================================================
+// YOUTUBE (MAGIA)
+// =========================================================
+app.get("/youtube", async (_req, res) => {
+  try {
+    if (!process.env.YOUTUBE_API_KEY)
+      return res.status(500).json({ error: "Falta YOUTUBE_API_KEY" });
+
+    const r = await axios.get(
+      "https://www.googleapis.com/youtube/v3/search",
+      {
+        params: {
+          part: "snippet",
+          q: "trucos de magia ilusionismo tutoriales magia",
+          type: "video",
+          maxResults: 6,
+          key: process.env.YOUTUBE_API_KEY
+        }
+      }
+    );
+
+    res.json(r.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 window.cargarVideosYouTube = cargarVideosYouTube;
 
 //////////////////////

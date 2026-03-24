@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ark</title>
+  <title>Magia Arcana</title>
 
   <!-- Estilos principales -->
   <link rel="stylesheet" href="style.css" />
@@ -41,14 +41,14 @@
 
   <div class="container">
 
-    <h1>ARK</h1>
+    <h1>MAGIA ARCANA</h1>
 
     <!-- REDES -->
     <h2>Redes Sociales</h2>
 
     <div class="social-buttons">
-      <button onclick="cargarVideosYouTube()">Ver videos YouTube</button>
-      <button onclick="cargarPostsFacebook()">Ver posts Facebook</button>
+      <button onclick="cargarVideosYouTube()">Ver rituales en YouTube</button>
+      <button onclick="cargarPostsFacebook()">Ver posts mágicos de Facebook</button>
     </div>
 
     <div id="youtube-videos"></div>
@@ -60,10 +60,10 @@
     <!-- 2FA -->
     <h2>Verificación en 2 pasos</h2>
 
-    <button onclick="enviarCodigo()">📩 Enviar código a mi correo</button>
+    <button onclick="enviarCodigo()">📩 Enviar código mágico a mi correo</button>
     <br><br>
 
-    <input type="text" id="codigo" placeholder="Ingresa el código recibido" />
+    <input type="text" id="codigo" placeholder="Ingresa el código arcano" />
     <button onclick="verificarCodigo()">Verificar código</button>
 
     <p id="verificacion-msg"></p>
@@ -74,8 +74,8 @@
     <p id="map-error" class="error"></p>
 
     <!-- IA -->
-    <h2>Chat IA sobre Dinosaurios</h2>
-    <input type="text" id="pregunta" placeholder="Pregunta sobre dinosaurios" />
+    <h2>Chat IA de Sabiduría Mágica</h2>
+    <input type="text" id="pregunta" placeholder="Pregunta sobre hechizos, magia o rituales" />
     <button onclick="preguntarIA()">Preguntar</button>
     <p id="respuesta"></p>
 
@@ -85,7 +85,7 @@
       <div class="player-wrap">
         <video id="main-video" controls playsinline preload="metadata"></video>
         <div class="player-overlay">
-          <span id="main-filename">Selecciona un video…</span>
+          <span id="main-filename">Selecciona un video encantado…</span>
         </div>
       </div>
       <div class="player-meta">
@@ -96,10 +96,10 @@
     <!-- PAGOS -->
     <h2>Apoyar el proyecto</h2>
     <p style="text-align:center; margin: 0 0 10px;">
-      Si te gusta este proyecto, puedes apoyar con una donación. 🙌
+      Si te gusta este proyecto, puedes apoyar con una donación mágica. ✨
     </p>
 
-    <input id="buyerEmail" type="email" placeholder="Tu correo para enviarte el ticket" required />
+    <input id="buyerEmail" type="email" placeholder="Tu correo para enviarte el recibo" required />
 
     <div style="display:flex; justify-content:center; margin-bottom: 20px;">
       <button onclick="pagar()">💳 Pagar $12 MXN</button>
@@ -134,7 +134,7 @@
   <script>
     function gm_authFailure() {
       document.getElementById("map-error").innerText =
-        "Error: API Key inválida o dominio no autorizado en Google Maps.";
+        "Error: API Key inválida o dominio no autorizado.";
     }
   </script>
 
