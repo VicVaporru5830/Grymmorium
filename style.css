@@ -111,7 +111,7 @@ input:focus {
    ========================================================== */
 #videos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
   margin-top: 20px;
 }
@@ -127,12 +127,4 @@ input:focus {
 
 .video-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0,0,60,0.25);
-}
-
-.video-card video {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-bottom: 2px solid #1a5ea8;
-}
+  box-shadow: 0 10px 24px rgba
