@@ -292,7 +292,7 @@ app.get("/youtube", async (_req, res) => {
       {
         params: {
           part: "snippet",
-          q: "Animales prehistóricos documentales",
+          q: "hogwarts legacy pociones y hechizos",
           type: "video",
           maxResults: 6,
           key: process.env.YOUTUBE_API_KEY
