@@ -1,90 +1,81 @@
 /* ==========================================================
-   FONDO GENERAL — TEMÁTICA MÁGICA AZUL ASTRAL
+   FONDO GENERAL
    ========================================================== */
-:root{
-  --astro-bg1:#071122;
-  --astro-bg2:#0a1a2f;
-  --astro-accent:#4da6ff;
-  --astro-accent-2:#b3d9ff;
-  --astro-ink:#e6f7ff;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
 body {
   margin: 0;
   padding: 0;
-  font-family: ui-serif, Georgia, "Times New Roman", serif;
-  background: radial-gradient(1200px 700px at 20% 10%, rgba(77,166,255,.08), transparent),
-              radial-gradient(900px 600px at 80% 0%, rgba(179,217,255,.06), transparent),
-              linear-gradient(180deg, var(--astro-bg1), var(--astro-bg2));
-  color: var(--astro-ink);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: url('Monster Hunter World.png') no-repeat center center fixed;
+  background-size: cover;
   min-height: 100vh;
   position: relative;
 }
-/* Capa de estrellas sutil */
+
+/* Capa oscura */
 .overlay {
   position: fixed;
   inset: 0;
-  background: repeating-radial-gradient(circle at 15% 20%, rgba(255,255,255,.05) 0 2px, transparent 3px 40px),
-              radial-gradient(1000px 600px at 70% 80%, rgba(77,166,255,.08), transparent);
-  pointer-events: none;
+  background-color: rgba(0,0,0,0.55);
   z-index: 0;
 }
+
 /* ==========================================================
    CONTENEDOR PRINCIPAL
    ========================================================== */
 .container {
   position: relative;
   z-index: 1;
-  background: rgba(10, 22, 41, 0.85);
-  max-width: 860px;
+  background: rgba(255, 245, 245, 0.92);
+  max-width: 760px;
   width: 92%;
   margin: 40px auto;
-  padding: 28px;
+  padding: 35px;
   border-radius: 18px;
-  border: 1.5px solid var(--astro-accent);
-  box-shadow: 0 0 30px rgba(77,166,255,0.25), inset 0 0 12px rgba(179,217,255,0.08);
+  border: 2px solid #5e0a18;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
 }
+
 /* ==========================================================
-   TÍTULOS
+   TITULOS
    ========================================================== */
 h1, h2 {
   text-align: center;
-  color: var(--astro-accent-2);
-  letter-spacing:.4px;
-  text-shadow: 0 0 12px rgba(77,166,255,0.8);
-  margin: 10px 0 8px;
+  color: #5e0a18;
+  font-weight: 700;
+  letter-spacing: .3px;
+  margin-top: 8px;
 }
-h1{font-size: 34px}
-h2{font-size: 22px}
+
 /* ==========================================================
    BOTONES
    ========================================================== */
 button {
   padding: 12px 14px;
   border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1b3a66, var(--astro-accent));
+  border-radius: 10px;
+  background-color: #7a1026;
   color: #fff;
   font-size: 16px;
   cursor: pointer;
   margin: 5px 6px 5px 0;
-  transition: .25s ease;
-  box-shadow: 0 6px 18px rgba(77,166,255,0.25), 0 0 0 1px rgba(77,166,255,.25) inset;
+  transition: 0.2s ease;
 }
+
 button:hover {
-  background: linear-gradient(135deg, var(--astro-accent), var(--astro-accent-2));
+  background-color: #4e0a18;
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(179,217,255,0.35), 0 0 0 1px rgba(179,217,255,.45) inset;
 }
-/* Botón especial (Stripe) */
+
+/* Botón para pagar */
 button[onclick="pagar()"] {
   width: 100%;
   font-size: 18px;
   padding: 14px;
   border-radius: 14px;
   margin-top: 10px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.20);
 }
+
 /* ==========================================================
    INPUTS
    ========================================================== */
@@ -94,18 +85,19 @@ input[type="file"] {
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  border: 2px solid var(--astro-accent);
+  border: 2px solid #b37b85;
   margin: 7px 0 10px;
   font-size: 16px;
-  background: #0a1a2f;
-  color: var(--astro-ink);
-  box-shadow: inset 0 0 8px rgba(77,166,255,0.25);
+  background: #fff7f7;
+  color: #3b0c13;
 }
+
 input:focus {
   outline: none;
-  border-color: var(--astro-accent-2);
-  box-shadow: 0 0 0 3px rgba(179,217,255,0.25), inset 0 0 10px rgba(179,217,255,0.25);
+  border-color: #7a1026;
+  box-shadow: 0 0 8px rgba(122,16,38,0.35);
 }
+
 /* ==========================================================
    CAJAS DE RESPUESTA
    ========================================================== */
@@ -115,59 +107,191 @@ input:focus {
   margin-top: 10px;
   padding: 12px;
   border-radius: 10px;
-  background-color: rgba(15,25,45,0.85);
-  border-left: 5px solid var(--astro-accent);
+  background-color: #fff2f2;
+  border-left: 5px solid #7a1026;
   min-height: 40px;
-  color: var(--astro-ink);
-  box-shadow: 0 0 10px rgba(77,166,255,0.25);
+  color: #330610;
 }
+
 /* ==========================================================
-   MAPAS Y SECCIONES
+   MAPA GOOGLE (2D)
    ========================================================== */
-#map, #map3d {
+#map {
   margin-top: 15px;
   width: 100%;
+  height: 300px;
   border-radius: 15px;
-  border: 2px solid var(--astro-accent);
-  box-shadow: 0 0 18px rgba(77,166,255,0.25);
+  border: 3px solid #7a1026;
 }
-#map { height: 300px; }
-#map3d { height: 400px; margin-bottom: 10px; position: relative; }
+
+/* ==========================================================
+   MAPA 3D (MAPBOX)
+   ========================================================== */
+#map3d {
+  width: 100%;
+  height: 400px;
+  border-radius: 15px;
+  border: 3px solid #7a1026;
+  margin-top: 15px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+/* ==========================================================
+   SECCIÓN REDES SOCIALES
+   ========================================================== */
+#youtube-videos,
+#facebook-posts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.video,
+.fb-post {
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 12px;
+  border-left: 5px solid #7a1026;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.13);
+  max-width: 300px;
+}
+
 /* ==========================================================
    PLAYER PRINCIPAL
    ========================================================== */
 .player {
-  background: #0a1a2f;
+  background: #000;
   border-radius: 14px;
-  padding: 12px;
-  border:1px solid rgba(77,166,255,.35);
-  box-shadow: 0 12px 28px rgba(3,12,28,.35);
+  border: 2px solid #7a1026;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
-.player-wrap{ position: relative; border-radius: 12px; overflow: hidden; }
-.player video{ width: 100%; display: block; background:#000; }
-.player-overlay{
-  position: absolute; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0));
-  color: #cfeaff; padding: 10px 12px; font-size: 14px;
+
+.player-wrap {
+  position: relative;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  width: 100%;
 }
-.player-meta{ font-size: 13px; color:#a8cfff; padding:8px 4px 0; }
+
+#main-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Overlay título */
+.player-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  padding: 10px 12px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0));
+  color: #fff;
+}
+
+#main-filename {
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0,0,0,.6);
+}
+
+.player-meta {
+  background: #111;
+  color: #ddd;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
 /* ==========================================================
-   GRID DE VIDEOS
+   GRID DE MINIATURAS
    ========================================================== */
-#videos-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 16px; margin-top: 14px; }
-.video-card{ background: rgba(7,17,34,.7); border:1px solid rgba(77,166,255,.25); border-radius: 14px; overflow: hidden; backdrop-filter: blur(4px); }
-.video-wrap{ position:relative; }
-.hover-video{ display:block; width:100%; height:auto; background:#000; }
-.video-overlay{ position:absolute; left:0; right:0; bottom:0; padding:8px 10px; background:linear-gradient(to top, rgba(0,0,0,.65), transparent); color:#cfeaff; font-size:13px; }
-.play-badge{ position:absolute; left:10px; top:10px; color:#b3d9ff; width:36px; height:36px; opacity:.8; }
-.video-meta{ display:flex; justify-content:space-between; padding:10px; color:#cfeaff; font-size:12px; }
+#videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.video-card {
+  background: #fff;
+  border-radius: 12px;
+  border-left: 5px solid #7a1026;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  transition: 0.2s ease;
+  cursor: pointer;
+}
+
+.video-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+}
+
+.video-wrap {
+  position: relative;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.hover-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0));
+  color: #fff;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.2s ease;
+}
+
+.video-card:hover .video-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.play-badge {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: 0;
+  transition: 0.18s ease;
+}
+
+.play-badge svg {
+  width: 54px;
+  height: 54px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.45));
+}
+
+.video-card:hover .play-badge {
+  opacity: .15;
+}
+
 /* ==========================================================
-   POSTS FB
+   RESPONSIVE
    ========================================================== */
-.fb-post{ background: rgba(7,17,34,.6); border:1px solid rgba(77,166,255,.25); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
-/* ==========================================================
-   MISC
-   ========================================================== */
-.social-buttons{ display:flex; flex-wrap:wrap; justify-content:center; }
-.error{ color:#ff6b6b; font-weight:600; margin-top:8px; }
-label{ color:#cfeaff }
+@media (max-width: 600px) {
+  #map3d {
+    height: 300px;
+  }
+
+  button {
+    width: 100%;
+  }
+}
