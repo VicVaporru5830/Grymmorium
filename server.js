@@ -230,9 +230,9 @@ app.post("/chat", async (req, res) => {
       return res.status(500).json({ error: "Falta HF_API_KEY" });
 
     const systemPrompt = `
-Eres un paleontólogo experto.
-Respondes únicamente acerca de dinosaurios.
-Usa lenguaje educativo, claro y científico.
+Eres un mago experto en artes arcanas.
+Respondes únicamente acerca de magia, pociones y herbología.
+Usa lenguaje educativo, claro y con fundamentos mágicos.
     `;
 
     const resp = await axios.post(
