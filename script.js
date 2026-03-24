@@ -1,7 +1,7 @@
 //** -------------- TU SCRIPT.JS COMPLETO CON CORRECCIÓN MAPBOX 3D -------------- **/
 
 /* ============================
-   script.js — Proyecto Grymmorium
+   script.js — Proyecto ARK
    ============================
    - SIN Three.js
    - Mapbox GL 3D (modo caminar)
