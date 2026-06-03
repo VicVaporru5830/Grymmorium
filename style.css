@@ -1,5 +1,5 @@
 /* ==========================================================
-   FONDO GENERAL — Aerospace Style
+   FONDO GENERAL — Aerospace Dashboard
    ========================================================== */
 body {
   margin: 0;
@@ -9,59 +9,117 @@ body {
   background-size: cover;
   min-height: 100vh;
   position: relative;
-  color: #0a1a2f; /* tono más oscuro para contraste */
+  color: #0a1a2f;
 }
 
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0,20,60,0.65); /* azul espacial más profundo */
+  background-color: rgba(0,20,60,0.65);
   z-index: 0;
 }
 
+/* ==========================================================
+   NAVBAR
+   ========================================================== */
+nav {
+  background: #0a3c5e;
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #1a5ea8;
+}
+nav h1 {
+  font-size: 20px;
+  font-weight: bold;
+}
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+nav ul li {
+  cursor: pointer;
+  font-weight: 600;
+}
+nav ul li:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================== */
 .container {
   position: relative;
   z-index: 1;
-  background: rgba(240, 248, 255, 0.92); /* azul claro translúcido */
-  max-width: 860px; /* un poco más ancho */
+  background: rgba(240, 248, 255, 0.92);
+  max-width: 1100px;
   width: 95%;
   margin: 40px auto;
   padding: 40px;
   border-radius: 20px;
-  border: 2px solid #123c7a; /* azul metálico */
+  border: 2px solid #123c7a;
   box-shadow: 0 12px 28px rgba(0,0,60,0.35);
 }
 
-h1, h2 {
+h2 {
   text-align: center;
-  color: #123c7a; /* azul aeroespacial */
+  color: #123c7a;
   font-weight: 700;
-  letter-spacing: .5px;
-  margin-top: 10px;
+  margin-bottom: 20px;
 }
 
 /* ==========================================================
-   BOTONES — Aerospace Style
+   TARJETAS DE MÉTRICAS
+   ========================================================== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 2px solid #1a5ea8;
+  box-shadow: 0 6px 14px rgba(0,0,60,0.2);
+}
+.card h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0a3c5e;
+}
+.card p {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1a5ea8;
+}
+
+/* ==========================================================
+   BOTONES
    ========================================================== */
 button {
   padding: 14px 18px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1a5ea8, #0a3c5e); /* degradado metálico */
+  background: linear-gradient(135deg, #1a5ea8, #0a3c5e);
   color: #fff;
   font-size: 16px;
   cursor: pointer;
   margin: 6px 8px 6px 0;
   transition: 0.25s ease;
 }
-
 button:hover {
   background: linear-gradient(135deg, #0a3c5e, #082040);
   transform: translateY(-2px);
 }
 
 /* ==========================================================
-   INPUTS — Aerospace Style
+   INPUTS
    ========================================================== */
 input[type="text"],
 input[type="email"],
@@ -73,10 +131,9 @@ input[type="number"] {
   border: 2px solid #1a5ea8;
   margin: 8px 0 12px;
   font-size: 16px;
-  background: #f0faff; /* azul muy claro */
+  background: #f0faff;
   color: #0a2c4e;
 }
-
 input:focus {
   outline: none;
   border-color: #123c7a;
@@ -84,12 +141,11 @@ input:focus {
 }
 
 /* ==========================================================
-   RESPUESTAS — Aerospace Style
+   RESPUESTAS
    ========================================================== */
 #respuesta,
 #verificacion-msg,
-#upload-status,
-#resultado-evaluacion {
+#upload-status {
   margin-top: 12px;
   padding: 14px;
   border-radius: 12px;
@@ -101,30 +157,21 @@ input:focus {
 }
 
 /* ==========================================================
-   MAPAS — Aerospace Style
+   MAPAS
    ========================================================== */
-#map {
-  margin-top: 18px;
+#map, #map3d {
   width: 100%;
-  height: 320px;
-  border-radius: 18px;
-  border: 3px solid #1a5ea8;
-  box-shadow: 0 8px 20px rgba(0,0,60,0.3);
-}
-
-#map3d {
-  width: 100%;
-  height: 420px;
   border-radius: 18px;
   border: 3px solid #1a5ea8;
   margin-top: 18px;
   margin-bottom: 12px;
-  overflow: hidden;
   box-shadow: 0 10px 26px rgba(0,0,60,0.35);
 }
+#map { height: 320px; }
+#map3d { height: 420px; }
 
 /* ==========================================================
-   REPRODUCTOR PRINCIPAL — Aerospace Style
+   REPRODUCTOR
    ========================================================== */
 .player {
   background: #000;
@@ -134,13 +181,11 @@ input:focus {
   margin-bottom: 20px;
   box-shadow: 0 8px 20px rgba(0,0,60,0.3);
 }
-
 .player-wrap {
   position: relative;
   width: 100%;
   max-height: 260px;
 }
-
 #main-video {
   width: 100%;
   height: 100%;
@@ -149,7 +194,7 @@ input:focus {
 }
 
 /* ==========================================================
-   GRID DE VIDEOS — Aerospace Style
+   GRID DE VIDEOS
    ========================================================== */
 #videos-grid {
   display: grid;
@@ -157,7 +202,6 @@ input:focus {
   gap: 14px;
   margin-top: 22px;
 }
-
 .video-card {
   background: #fff;
   border-radius: 12px;
@@ -166,12 +210,10 @@ input:focus {
   overflow: hidden;
   transition: 0.25s ease;
 }
-
 .video-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 22px rgba(0,0,60,0.35);
 }
-
 .video-card video {
   width: 100%;
   height: 140px;
