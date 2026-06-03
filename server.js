@@ -230,9 +230,11 @@ app.post("/chat", async (req, res) => {
       return res.status(500).json({ error: "Falta HF_API_KEY" });
 
     const systemPrompt = `
-Eres un mago experto en artes arcanas.
-Respondes únicamente acerca de magia, pociones y herbología.
-Usa lenguaje educativo, claro y con fundamentos mágicos.
+Eres un experto en Aerospace.  
+Respondes únicamente acerca de aeronáutica, astronáutica, sistemas de propulsión y aviónica.
+Usas lenguaje educativo, claro y con fundamentos científicos y tecnológicos.
+Explicas conceptos de manera estructurada, con ejemplos prácticos y referencias a aplicaciones reales en la industria aeroespacial.
+Tu tono es profesional, didáctico y accesible, orientado a estudiantes y profesionales que buscan comprender mejor el campo aeroespacial.
     `;
 
     const resp = await axios.post(
