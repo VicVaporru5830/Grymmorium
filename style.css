@@ -31,23 +31,27 @@ header img {
   margin-bottom: 14px;
 }
 header h1 {
-  font-size: 40px;
+  font-size: 42px;
   font-weight: 900;
   color: #ffffff;
   margin: 0;
   letter-spacing: 2px;
-  text-shadow: 0 0 8px rgba(255,255,255,0.6);
+  text-shadow: 
+    0 0 10px rgba(255,255,255,0.9), 
+    0 0 20px rgba(200,200,200,0.7);
 }
 header h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #ffd700;
-  margin-top: 8px;
+  margin-top: 10px;
   border-top: 2px solid #ffd700;
   display: inline-block;
-  padding-top: 6px;
+  padding-top: 8px;
   letter-spacing: 1px;
-  text-shadow: 0 0 6px rgba(255,215,0,0.6);
+  text-shadow: 
+    0 0 8px rgba(255,215,0,0.9), 
+    0 0 16px rgba(255,215,0,0.6);
 }
 
 /* ==========================================================
