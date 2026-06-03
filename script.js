@@ -5,7 +5,7 @@
    ============================
    - Google Maps 2D
    - Mapbox GL 3D (walk mode)
-   - IA Aerospace
+   - IA Aerospace (chat)
    - YouTube Aerospace
    - Streaming (R2/S3)
    - Stripe
@@ -33,7 +33,6 @@ const API_BASE = window.location.origin;
 //////////////////////
 async function enviarCodigo() {
   const email = prompt("Ingresa tu correo para enviarte el código de acceso:");
-
   if (!email) return alert("Debes ingresar un correo.");
 
   try {
@@ -42,11 +41,8 @@ async function enviarCodigo() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email })
     });
-
     const data = await r.json();
-
     if (!r.ok) return alert("Error: " + data.error);
-
     alert("Código enviado a tu correo ✈️");
   } catch (error) {
     console.error("Error enviando código:", error);
@@ -57,24 +53,19 @@ async function enviarCodigo() {
 async function verificarCodigo() {
   const codigo = document.getElementById("codigo").value;
   const msg = document.getElementById("verificacion-msg");
-
   if (!codigo) {
     msg.style.color = "red";
     msg.innerText = "Ingresa el código de acceso";
     return;
   }
-
   msg.innerText = "Verificando...";
-
   try {
     const r = await fetch(`${API_BASE}/verificar-codigo`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ codigo })
     });
-
     const data = await r.json();
-
     if (r.ok) {
       msg.style.color = "green";
       msg.innerText = "Código correcto ✓";
@@ -88,7 +79,6 @@ async function verificarCodigo() {
     console.error(error);
   }
 }
-
 window.enviarCodigo = enviarCodigo;
 window.verificarCodigo = verificarCodigo;
 
@@ -100,10 +90,8 @@ function initMap() {
     const ubicacion = { lat: 19.4326, lng: -99.1332 };
     const el = document.getElementById("map");
     if (!el || !window.google?.maps) return;
-
     const map = new google.maps.Map(el, { zoom: 10, center: ubicacion });
     new google.maps.Marker({ position: ubicacion, map });
-
   } catch (error) {
     const errEl = document.getElementById("map-error");
     if (errEl) errEl.innerText = "Error cargando Google Maps: " + error.message;
@@ -113,15 +101,24 @@ function initMap() {
 window.initMap = initMap;
 
 //////////////////////
-// IA AEROSPACE (CLIENTE)
+// IA AEROSPACE (CHAT)
 //////////////////////
 async function preguntarIA() {
   const pregunta = document.getElementById("pregunta")?.value || "";
-  const respuestaBox = document.getElementById("respuesta");
-
+  const chatBox = document.getElementById("chat-messages");
   if (!pregunta) return;
 
-  respuestaBox.innerText = "Procesando consulta aeroespacial...";
+  // Mensaje de usuario
+  const msgUser = document.createElement("div");
+  msgUser.className = "chat-message";
+  msgUser.innerText = "👤 " + pregunta;
+  chatBox.appendChild(msgUser);
+
+  // Mensaje de estado
+  const msgIA = document.createElement("div");
+  msgIA.className = "chat-message";
+  msgIA.innerText = "Procesando consulta aeroespacial...";
+  chatBox.appendChild(msgIA);
 
   try {
     const res = await fetch(`${API_BASE}/chat`, {
@@ -129,40 +126,34 @@ async function preguntarIA() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pregunta }),
     });
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
-    respuestaBox.innerText = data.respuesta || "Sin respuesta";
+    msgIA.innerText = "🤖 " + (data.respuesta || "Sin respuesta");
   } catch (error) {
-    respuestaBox.innerText = "Error IA: " + error.message;
+    msgIA.innerText = "Error IA: " + error.message;
   }
+
+  document.getElementById("pregunta").value = "";
 }
 window.preguntarIA = preguntarIA;
 
 //////////////////////
-// YOUTUBE (CLIENTE) — Aerospace
+// YOUTUBE (CLIENTE)
 //////////////////////
 async function cargarVideosYouTube() {
   const contenedor = document.getElementById("youtube-videos");
   const errorBox = document.getElementById("youtube-error");
-
   contenedor.innerHTML = "";
   errorBox.innerText = "Cargando videos aeroespaciales...";
-
   try {
     const res = await fetch(`${API_BASE}/youtube`);
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.error || "Error desconocido");
-
     errorBox.innerText = "";
-
     data.items.forEach((item) => {
       if (item.id?.kind === "youtube#video") {
         const vid = item.id.videoId;
         const title = item.snippet?.title || "Video Aerospace";
-
         contenedor.innerHTML += `
           <div class="video">
             <iframe width="300" height="170"
@@ -176,7 +167,6 @@ async function cargarVideosYouTube() {
         `;
       }
     });
-
   } catch (err) {
     errorBox.innerText = "Error YouTube: " + err.message;
   }
@@ -208,7 +198,6 @@ function setFeatured(videoObj) {
   mainVideo.pause();
   mainVideo.src = videoObj?.url || "";
   mainVideo.currentTime = 0;
-
   mainVideo.muted = true;
   mainVideo.play().catch(() => {});
 
@@ -229,12 +218,11 @@ async function loadVideos(keepKey) {
   try {
     const r = await fetch(`${API_BASE}/videos`);
     const data = await r.json();
-
     if (!r.ok) throw new Error(data.error || "Error");
 
     grid.innerHTML = "";
-
     const videos = data.videos || [];
+
     if (!videos.length) {
       grid.innerHTML = "<em>Sin videos</em>";
       setFeatured({ url: "", key: "", size: 0 });
@@ -264,9 +252,7 @@ async function loadVideos(keepKey) {
         </div>
       `;
 
-      const thumb = card.querySelector(".hover-video");
-
-            card.addEventListener("click", async () => {
+      card.addEventListener("click", async () => {
         setFeatured(v);
         try {
           const head = await fetch(v.url, { method: "HEAD" });
@@ -290,26 +276,20 @@ async function loadVideos(keepKey) {
 //////////////////////
 async function handleUpload(e) {
   e.preventDefault();
-
   const status = document.getElementById("upload-status");
   const input = document.getElementById("video");
   const file = input?.files?.[0];
-
   if (!file) return;
 
   status.textContent = "Subiendo...";
-
   try {
     const fd = new FormData();
     fd.append("video", file);
-
     const r = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd });
     const data = await r.json();
-
     if (!r.ok) throw new Error(data.error || "Error de subida");
 
     status.textContent = "✓ Subido";
-
     await loadVideos();
   } catch (err) {
     status.textContent = "Error: " + err.message;
@@ -326,7 +306,6 @@ async function pagar() {
   try {
     const emailInput = document.getElementById("buyerEmail");
     const buyerEmail = (emailInput?.value || "").trim();
-
     if (!buyerEmail) {
       alert("Ingresa tu correo para enviarte el recibo.");
       emailInput?.focus();
@@ -334,7 +313,6 @@ async function pagar() {
     }
 
     const items = [{ name: "Donación Aerospace", qty: 1, price: 12.0 }];
-
     const res = await fetch(`${API_BASE}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -347,13 +325,11 @@ async function pagar() {
     }
 
     const data = await res.json();
-
     if (data?.url) {
       window.location.href = data.url;
     } else {
       alert("No se pudo iniciar el pago (sin URL)");
     }
-
   } catch (e) {
     alert("Error al iniciar pago: " + e.message);
     console.error("Stripe error:", e);
@@ -384,4 +360,3 @@ document.addEventListener("DOMContentLoaded", () => {
   loadVideos();
   loadMapboxTokenAndInit();
 });
-s
