@@ -18,7 +18,7 @@
 
   <!-- HEADER CON LOGO Y TÍTULO -->
   <header>
-    <img src="Logo.jpeg" alt="Logo CANACINTRA" />
+    <img src="logo.png" alt="Logo CANACINTRA" />
     <h1>CANACINTRA</h1>
     <h2>AEROSPACE – IECB</h2>
   </header>
@@ -69,21 +69,6 @@
       </div>
     </div>
 
-    <!-- REDES -->
-    <h2>Redes Multimedia</h2>
-    <div class="social-buttons">
-      <button onclick="cargarVideosYouTube()">Ver videos en YouTube</button>
-    </div>
-    <div id="youtube-videos"></div>
-    <p id="youtube-error" class="error"></p>
-
-    <!-- 2FA -->
-    <h2>Verificación en 2 pasos</h2>
-    <button onclick="enviarCodigo()">📩 Enviar código a mi correo</button><br><br>
-    <input type="text" id="codigo" placeholder="Ingresa el código recibido" />
-    <button onclick="verificarCodigo()">Verificar código</button>
-    <p id="verificacion-msg"></p>
-
     <!-- MAPA -->
     <h2>Mapa 2D (Google Maps)</h2>
     <div id="map"></div>
@@ -118,17 +103,6 @@
     <div style="display:flex; justify-content:center; margin-bottom: 20px;">
       <button onclick="pagar()">💳 Pagar $12 MXN</button>
     </div>
-
-    <!-- STREAMING -->
-    <h2>Mis Videos (Streaming)</h2>
-    <form id="uploadForm" enctype="multipart/form-data">
-      <label>Subir video MP4/WEBM/OGG:</label>
-      <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/ogg" required />
-      <button type="submit">Subir video</button>
-      <p id="upload-status"></p>
-    </form>
-    <button id="refreshBtn" type="button">Actualizar lista</button>
-    <div id="videos-grid"></div>
 
     <!-- MAPBOX 3D -->
     <h2>Exploración 3D (Mapbox)</h2>
