@@ -3,7 +3,7 @@
 /* ============================
    script.js — Tema Aerospace
    ============================
-   - Google Maps (eliminado)
+   - Google Maps 2D
    - Mapbox GL 3D (walk mode)
    - IA Aerospace
    - YouTube Aerospace
@@ -91,6 +91,26 @@ async function verificarCodigo() {
 
 window.enviarCodigo = enviarCodigo;
 window.verificarCodigo = verificarCodigo;
+
+//////////////////////
+// GOOGLE MAPS (2D)
+//////////////////////
+function initMap() {
+  try {
+    const ubicacion = { lat: 19.4326, lng: -99.1332 };
+    const el = document.getElementById("map");
+    if (!el || !window.google?.maps) return;
+
+    const map = new google.maps.Map(el, { zoom: 10, center: ubicacion });
+    new google.maps.Marker({ position: ubicacion, map });
+
+  } catch (error) {
+    const errEl = document.getElementById("map-error");
+    if (errEl) errEl.innerText = "Error cargando Google Maps: " + error.message;
+    console.error(error);
+  }
+}
+window.initMap = initMap;
 
 //////////////////////
 // IA AEROSPACE (CLIENTE)
@@ -246,17 +266,7 @@ async function loadVideos(keepKey) {
 
       const thumb = card.querySelector(".hover-video");
 
-      card.addEventListener("mouseenter", () => {
-        thumb.currentTime = 0;
-        thumb.play().catch(() => {});
-      });
-
-      card.addEventListener("mouseleave", () => {
-        thumb.pause();
-        thumb.currentTime = 0;
-      });
-
-      card.addEventListener("click", async () => {
+            card.addEventListener("click", async () => {
         setFeatured(v);
         try {
           const head = await fetch(v.url, { method: "HEAD" });
@@ -374,3 +384,4 @@ document.addEventListener("DOMContentLoaded", () => {
   loadVideos();
   loadMapboxTokenAndInit();
 });
+s
