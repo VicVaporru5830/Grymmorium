@@ -285,4 +285,92 @@ async function handleUpload(e) {
   const input = document.getElementById("video");
   const file = input?.files?.[0];
 
-  if (!
+  if (!file) return;
+
+  status.textContent = "Subiendo...";
+
+  try {
+    const fd = new FormData();
+    fd.append("video", file);
+
+    const r = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd });
+    const data = await r.json();
+
+    if (!r.ok) throw new Error(data.error || "Error de subida");
+
+    status.textContent = "✓ Subido";
+
+    await loadVideos();
+  } catch (err) {
+    status.textContent = "Error: " + err.message;
+  } finally {
+    setTimeout(() => (status.textContent = ""), 3000);
+    input.value = "";
+  }
+}
+
+//////////////////////
+// PAGOS (Stripe Checkout)
+//////////////////////
+async function pagar() {
+  try {
+    const emailInput = document.getElementById("buyerEmail");
+    const buyerEmail = (emailInput?.value || "").trim();
+
+    if (!buyerEmail) {
+      alert("Ingresa tu correo para enviarte el recibo.");
+      emailInput?.focus();
+      return;
+    }
+
+    const items = [{ name: "Donación Aerospace", qty: 1, price: 12.0 }];
+
+    const res = await fetch(`${API_BASE}/crear-pago`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ buyerEmail, items }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status} ${txt}`);
+    }
+
+    const data = await res.json();
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      alert("No se pudo iniciar el pago (sin URL)");
+    }
+
+  } catch (e) {
+    alert("Error al iniciar pago: " + e.message);
+    console.error("Stripe error:", e);
+  }
+}
+window.pagar = pagar;
+
+//////////////////////
+// MAPBOX 3D — Aerospace
+//////////////////////
+// (este bloque ya lo tienes completo y no lo tocamos)
+
+//////////////////////
+// INIT
+//////////////////////
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("uploadForm")?.addEventListener("submit", handleUpload);
+  document.getElementById("refreshBtn")?.addEventListener("click", () => loadVideos());
+
+  document.addEventListener("keydown", (e) => {
+    const mainVideo = document.getElementById("main-video");
+    if (e.code === "Space" && mainVideo) {
+      e.preventDefault();
+      mainVideo.paused ? mainVideo.play() : mainVideo.pause();
+    }
+  });
+
+  loadVideos();
+  loadMapboxTokenAndInit();
+});
