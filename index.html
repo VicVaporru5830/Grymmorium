@@ -18,7 +18,7 @@
 
   <!-- HEADER CON LOGO Y TÍTULO -->
   <header>
-    <img src="logo.png" alt="Logo CANACINTRA" />
+    <img src="Logo.jpeg" alt="Logo CANACINTRA" />
     <h1>CANACINTRA</h1>
     <h2>AEROSPACE – IECB</h2>
   </header>
@@ -74,11 +74,17 @@
     <div id="map"></div>
     <p id="map-error" class="error"></p>
 
-    <!-- IA -->
+    <!-- CHAT IA -->
     <h2>Chat IA Aerospace</h2>
-    <input type="text" id="pregunta" placeholder="Pregunta sobre proyectos aeroespaciales" />
-    <button onclick="preguntarIA()">Preguntar</button>
-    <p id="respuesta"></p>
+    <div class="chat-box">
+      <div id="chat-messages">
+        <div class="chat-message">¡Bienvenido! Pregunta lo que quieras sobre Aerospace.</div>
+      </div>
+      <div class="chat-input">
+        <input type="text" id="pregunta" placeholder="Escribe tu pregunta aquí..." />
+        <button onclick="preguntarIA()">Preguntar</button>
+      </div>
+    </div>
 
     <!-- REPRODUCTOR -->
     <h2>Reproductor</h2>
