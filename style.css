@@ -1,5 +1,5 @@
 /* ==========================================================
-   FONDO GENERAL — Aerospace Dashboard
+   FONDO GENERAL — CANACINTRA Aerospace
    ========================================================== */
 body {
   margin: 0;
@@ -9,7 +9,7 @@ body {
   background-size: cover;
   min-height: 100vh;
   position: relative;
-  color: #0a1a2f;
+  color: #fff; /* texto blanco por defecto */
 }
 
 .overlay {
@@ -20,6 +20,35 @@ body {
 }
 
 /* ==========================================================
+   HEADER CON LOGO Y TÍTULO
+   ========================================================== */
+header {
+  text-align: center;
+  padding: 40px 20px 20px;
+}
+header img {
+  max-width: 140px;
+  margin-bottom: 14px;
+}
+header h1 {
+  font-size: 40px;
+  font-weight: 900;
+  color: #ffffff; /* blanco */
+  margin: 0;
+  letter-spacing: 2px;
+}
+header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffd700; /* dorado */
+  margin-top: 8px;
+  border-top: 2px solid #ffd700;
+  display: inline-block;
+  padding-top: 6px;
+  letter-spacing: 1px;
+}
+
+/* ==========================================================
    NAVBAR
    ========================================================== */
 nav {
@@ -27,13 +56,9 @@ nav {
   color: #fff;
   padding: 14px 24px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
+  gap: 30px;
   border-bottom: 3px solid #1a5ea8;
-}
-nav h1 {
-  font-size: 20px;
-  font-weight: bold;
 }
 nav ul {
   list-style: none;
@@ -62,6 +87,7 @@ nav ul li:hover {
   border-radius: 20px;
   border: 2px solid #123c7a;
   box-shadow: 0 12px 28px rgba(0,0,60,0.35);
+  color: #0a1a2f;
 }
 
 h2 {
@@ -106,7 +132,7 @@ button {
   padding: 14px 18px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1a5ea8, #0a3c5e);
+  background: linear-gradient(135deg, #ffd700, #0a3c5e); /* dorado a azul */
   color: #fff;
   font-size: 16px;
   cursor: pointer;
@@ -191,33 +217,4 @@ input:focus {
   height: 100%;
   max-height: 260px;
   object-fit: contain;
-}
-
-/* ==========================================================
-   GRID DE VIDEOS
-   ========================================================== */
-#videos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 22px;
-}
-.video-card {
-  background: #fff;
-  border-radius: 12px;
-  border: 2px solid #1a5ea8;
-  box-shadow: 0 6px 14px rgba(0,0,60,0.2);
-  overflow: hidden;
-  transition: 0.25s ease;
-}
-.video-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 22px rgba(0,0,60,0.35);
-}
-.video-card video {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  display: block;
-  border-bottom: 2px solid #1a5ea8;
 }

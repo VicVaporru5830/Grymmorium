@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aerospace Project</title>
+  <title>CANACINTRA</title>
 
   <!-- Estilos principales -->
   <link rel="stylesheet" href="style.css" />
@@ -16,9 +16,15 @@
 
   <div class="overlay"></div>
 
+  <!-- HEADER CON LOGO Y TÍTULO -->
+  <header>
+    <img src="logo.png" alt="Logo CANACINTRA" />
+    <h1>CANACINTRA</h1>
+    <h2>AEROSPACE – IECB</h2>
+  </header>
+
   <!-- NAVBAR -->
   <nav>
-    <h1>Aerospace Project</h1>
     <ul>
       <li>Dashboard</li>
       <li>Lista</li>
@@ -53,4 +59,74 @@
     <p id="verificacion-msg"></p>
 
     <!-- MAPA -->
-    <h2>Mapa 2D (Google
+    <h2>Mapa 2D (Google Maps)</h2>
+    <div id="map"></div>
+    <p id="map-error" class="error"></p>
+
+    <!-- IA -->
+    <h2>Chat IA Aerospace</h2>
+    <input type="text" id="pregunta" placeholder="Pregunta sobre proyectos aeroespaciales" />
+    <button onclick="preguntarIA()">Preguntar</button>
+    <p id="respuesta"></p>
+
+    <!-- REPRODUCTOR -->
+    <h2>Reproductor</h2>
+    <div class="player">
+      <div class="player-wrap">
+        <video id="main-video" controls playsinline preload="metadata"></video>
+        <div class="player-overlay">
+          <span id="main-filename">Selecciona un video…</span>
+        </div>
+      </div>
+      <div class="player-meta">
+        <div id="main-extra"></div>
+      </div>
+    </div>
+
+    <!-- PAGOS -->
+    <h2>Apoyar el proyecto</h2>
+    <p style="text-align:center; margin: 0 0 10px;">
+      Si te gusta este proyecto, puedes apoyar con una donación. 🚀
+    </p>
+    <input id="buyerEmail" type="email" placeholder="Tu correo para enviarte el recibo" required />
+    <div style="display:flex; justify-content:center; margin-bottom: 20px;">
+      <button onclick="pagar()">💳 Pagar $12 MXN</button>
+    </div>
+
+    <!-- STREAMING -->
+    <h2>Mis Videos (Streaming)</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <label>Subir video MP4/WEBM/OGG:</label>
+      <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/ogg" required />
+      <button type="submit">Subir video</button>
+      <p id="upload-status"></p>
+    </form>
+    <button id="refreshBtn" type="button">Actualizar lista</button>
+    <div id="videos-grid"></div>
+
+    <!-- MAPBOX 3D -->
+    <h2>Exploración 3D (Mapbox)</h2>
+    <div id="map3d"></div>
+    <p id="map3d-error" class="error"></p>
+
+  </div>
+
+  <!-- MAPBOX JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.js"></script>
+
+  <!-- SCRIPT PRINCIPAL -->
+  <script src="script.js"></script>
+
+  <!-- GOOGLE MAPS -->
+  <script>
+    function gm_authFailure() {
+      document.getElementById("map-error").innerText =
+        "Error: API Key inválida o dominio no autorizado.";
+    }
+  </script>
+  <script async 
+    src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&callback=initMap">
+  </script>
+
+</body>
+</html>
